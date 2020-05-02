@@ -1,0 +1,10 @@
+<nav search_view="search">
+  <collection label="COVID19 Japan">
+    <view name="covid19_japan" default="true"/>
+    <view name="covid19_japan_analysis" />
+    <view name="covid19_japan_specific_prefecture" />
+  </collection>
+  <view name="covid19_japan_nhk" />
+  <view name="search" />
+  <view name="dashboards" />
+</nav>

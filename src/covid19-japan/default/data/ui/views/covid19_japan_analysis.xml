@@ -1,0 +1,555 @@
+<dashboard theme="dark">
+  <label>COVID19 Japan Analysis</label>
+  <init>
+    <unset token="debug">true</unset>
+    <!--
+    <set token="debug">true</set>
+    -->
+  </init>
+  <row>
+    <panel depends="$debug$">
+      <title>感染者全件 (デバッグ用)</title>
+      <table>
+        <search id="patient_all_base">
+          <query>
+            index=covid19japan source="*-patient_data_latest.json" earliest=-1d patientId!=-1 confirmedPatient!="false"
+            | dedup patientId
+            | eval _time=strptime(dateAnnounced, "%F")
+            | fields _time, patientId, confirmedPatient, detectedPrefecture, detectedCityTown, dateAnnounced, patientStatus, deceasedDate, gender, ageBracket, residence,  sourceURL
+          </query>
+          <refresh>30m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="count">3</option>
+        <option name="refresh.display">progressbar</option>
+        <fields>["_time","patientId","confirmedPatient","detectedPrefecture","detectedCityTown","dateAnnounced","patientStatus","deceasedDate","gender","ageBracket","residence","sourceURL"]</fields>
+      </table>
+    </panel>
+    <panel depends="$debug$">
+      <title>サマリ全件 (デバッグ用)</title>
+      <table>
+        <search id="summary_all_base">
+          <query>
+            | inputlookup covid19japan_daily_summary.csv
+            | fields _time, updated, confirmed, confirmedAvg3d, confirmedAvg7d, confirmedCumulative, confirmedCumulativeAvg3d, confirmedCumulativeAvg7d, criticalCumulative, deceased, deceasedCumulative, recoveredCumulative, testedCumulative
+          </query>
+          <refresh>30m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="count">3</option>
+        <option name="refresh.display">progressbar</option>
+        <fields>["_time","updated","confirmed","confirmedAvg3d","confirmedAvg7d","confirmedCumulative","confirmedCumulativeAvg3d","confirmedCumulativeAvg7d","criticalCumulative","deceased","deceasedCumulative","recoveredCumulative","testedCumulative"]</fields>
+      </table>
+    </panel>
+    <panel depends="$debug$">
+      <title>県別全件 (デバッグ用)</title>
+      <table>
+        <search id="prefectures_all_base">
+          <query>
+            | inputlookup covid19japan_confirmed_by_prefecture_summary.csv
+            | fields _time, updated, name, name_ja, min_time, gc_min_time, dailyConfirmedStartDate, days_confirmed_count, daily_confirmed, gd_min_time, dailyDeceasedStartDate, days_deceased_count, daily_deceased, newlyConfirmed, yesterdayConfirmed, newlyDeceased, yesterdayDeceased, confirmed, deceased, recovered, cruisePassenger, confirmedByCity.*
+          </query>
+          <refresh>30m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="count">3</option>
+        <option name="refresh.display">progressbar</option>
+        <fields>["updated","name","name_ja","newlyConfirmed","yesterdayConfirmed","newlyDeceased","yesterdayDeceased","confirmed","deceased","recovered"]</fields>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>死亡率</title>
+      <chart>
+        <search base="prefectures_all_base">
+          <query>
+<!-- prefectures_all_base -->
+            | dedup name, name_ja, confirmed, deceased, recovered
+            | eval name_ja=if((name_ja="" OR isnull(name_ja)),"不明",name_ja)
+            | dedup name_ja
+            | fields - _time
+            | eval "死亡率"=round(deceased*100/confirmed,2)
+            | eval "回復率"=round(recovered*100/confirmed,2)
+            | sort  0 -num("死亡率") +num("回復率")
+            | rename name_ja as "都道府県"
+            | fields "都道府県", "死亡率"
+          </query>
+        </search>
+        <option name="height">820</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisLabelsY.majorUnit">0.5</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">死亡率 (%)</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>回復率 (都道府県「不明」を除く、判明分のみ)</title>
+      <chart>
+        <search base="prefectures_all_base">
+          <query>
+<!-- prefectures_all_base -->
+            | dedup name, name_ja, confirmed, deceased, recovered
+            | eval name_ja=if((name_ja="" OR isnull(name_ja)),"不明",name_ja)
+            | dedup name_ja
+            | search name_ja!="不明"
+            | fields - _time
+            | eval "死亡率"=round(deceased*100/confirmed,2)
+            | eval "回復率"=round(recovered*100/confirmed,2)
+            | sort  0 +num("回復率") -num("死亡率") 
+            | rename name_ja as "都道府県"
+            | fields "都道府県", "回復率"
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text">回復率 (%)</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">820</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel depends="last_date">
+      <title>感染者 年代比</title>
+      <chart>
+        <search base="patient_all_base">
+          <query>
+<!-- patient_all_base -->
+            | stats count by ageBracket
+            | eval ageBracket=if(ageBracket=-1,"不明", ageBracket)
+            | eval ageBracket=if(ageBracket=5, 0, ageBracket)
+            | sort 0 + ageBracket
+            | eval ageBracket=case(ageBracket=0,"0歳代", ageBracket=10,"10歳代", ageBracket=20,"20歳代", ageBracket=30,"30歳代", ageBracket=40,"40歳代", ageBracket=50,"50歳代", ageBracket=60,"60歳代", ageBracket=70,"70歳代", ageBracket=80,"80歳代", ageBracket=90,"90歳代", ageBracket=100,"100歳代", true(), "不明")
+          </query>
+        </search>
+        <option name="height">400</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel depends="last_date">
+      <title>死亡者  年代比</title>
+      <chart>
+        <search base="patient_all_base">
+          <query>
+<!-- patient_all_base -->
+            | search patientStatus="Deceased"
+            | stats count by ageBracket
+            | eval ageBracket=if(ageBracket=-1,"不明", ageBracket)
+            | eval ageBracket=if(ageBracket=5, 0, ageBracket)
+            | sort 0 + ageBracket
+            | eval ageBracket=case(ageBracket=0,"0歳代", ageBracket=10,"10歳代", ageBracket=20,"20歳代", ageBracket=30,"30歳代", ageBracket=40,"40歳代", ageBracket=50,"50歳代", ageBracket=60,"60歳代", ageBracket=70,"70歳代", ageBracket=80,"80歳代", ageBracket=90,"90歳代", ageBracket=100,"100歳代", true(), "不明")
+          </query>
+        </search>
+        <option name="height">400</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>年代別 死亡率</title>
+      <chart>
+        <search base="patient_all_base">
+          <query>
+<!-- patient_all_base -->
+            | eval ageBracket=if(ageBracket=-1,"不明", ageBracket)
+            | eval ageBracket=if(ageBracket=5, 0, ageBracket)
+            | chart count over ageBracket by patientStatus
+            | sort 0 + ageBracket
+            | eval ageBracket=case(ageBracket=0,"0歳代", ageBracket=10,"10歳代", ageBracket=20,"20歳代", ageBracket=30,"30歳代", ageBracket=40,"40歳代", ageBracket=50,"50歳代", ageBracket=60,"60歳代", ageBracket=70,"70歳代", ageBracket=80,"80歳代", ageBracket=90,"90歳代", ageBracket=100,"100歳代", true(), "不明")
+            | addtotals fieldname=Total
+            | eval 死亡=Deceased
+            | eval 生存=(Total-Deceased)
+            | fields ageBracket, "死亡", "生存"
+          </query>
+        </search>
+        <option name="height">400</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.text">年代</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text">割合</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked100</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>感染者 Gender 比</title>
+      <chart>
+        <search base="patient_all_base">
+          <query>
+<!-- patient_all_base -->
+            | fillnull value="unknown" gender
+            | stats count by gender
+            | sort 0 - count
+            | eval gender=case(gender="F","女性", gender="M","男性", gender="unknown","不明", true(), "その他")
+          </query>
+        </search>
+        <option name="height">400</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>死亡者 Gender 比</title>
+      <chart>
+        <search base="patient_all_base">
+          <query>
+<!-- patient_all_base -->
+            | search patientStatus="Deceased"
+            | fillnull value="unknown" gender
+            | stats count by gender
+            | sort 0 - count
+            | eval gender=case(gender="F","女性", gender="M","男性", gender="unknown","不明", true(), "その他")
+          </query>
+        </search>
+        <option name="height">400</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Gender 別 死亡率</title>
+      <chart>
+        <search base="patient_all_base">
+          <query>
+<!-- patient_all_base -->
+            | fillnull value="unknown" gender
+            | chart count over gender by patientStatus
+            | sort 0 - Deceased
+            | eval gender=case(gender="F","女性", gender="M","男性", gender="unknown","不明", true(), "その他")
+            | addtotals fieldname=Total
+            | eval 生存=(Total-Deceased)
+            | eval 死亡=Deceased 
+            | eval 死亡率=round('死亡'*100/Total,2)
+            | eval 生存率=round('生存'*100/Total,2)
+            | fields gender, "死亡", "生存"
+          </query>
+        </search>
+        <option name="height">400</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked100</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>公表曜日平均</title>
+      <chart>
+        <search base="prefectures_all_base">
+          <query>
+<!-- prefectures_all_base -->
+            | fields _time, name_ja, daily_confirmed
+            | xyseries _time, name_ja, daily_confirmed
+            | addtotals fieldname="合計"
+            
+            | eval wday=strftime(_time,"%w")
+            | stats avg(*) as * by wday
+            | eval weekday=case(wday=0,"日",wday=1,"月",wday=2,"火",wday=3,"水",wday=4,"木",wday=5,"金",wday=6,"土")
+            | fields - wday
+
+            | addcoltotals labelfield=weekday label=Total
+            | transpose 0 header_field=weekday
+            | sort 0 - Total
+            | fields - Total
+            | transpose 0 header_field=column column_name=曜日
+          </query>
+        </search>
+        <option name="height">400</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text">平均</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.text">合計(平均)</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">1</option>
+        <option name="charting.axisY2.maximumNumber">160</option>
+        <option name="charting.axisY2.scale">linear</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.overlayFields">合計</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>データソース:</title>
+      <html>
+        <ul>
+          <li>
+            <a href="https://covid19japan.com/" target="_blank">"Coronavirus Disease (COVID-19) Japan Tracker" (https://covid19japan.com/)</a>
+          </li>
+<!--
+          <li>
+            マップタイル出典: 
+              <ul>
+                <li>
+                  <a href="https://cran.r-project.org/web/packages/NipponMap/index.html" target="_blank">"NipponMap" (https://cran.r-project.org/web/packages/NipponMap/index.html)</a>
+                </li>
+                <li>
+                  <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">地理院タイル (https://maps.gsi.go.jp/development/ichiran.html)</a>
+                </li>
+              </ul>
+          </li>
+-->
+        </ul>
+      </html>
+    </panel>
+  </row>
+</dashboard>

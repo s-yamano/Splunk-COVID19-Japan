@@ -1,0 +1,550 @@
+<form theme="dark">
+  <label>COVID19 Japan NHK</label>
+  <init>
+    <set token="last_date">-</set>
+    <set token="perday_last_date">-</set>
+  </init>
+  <search id="patient_initial_base">
+    <query>
+      | inputlookup nhkdata
+    </query>
+    <earliest></earliest>
+    <latest></latest>
+    <sampleRatio>1</sampleRatio>
+    <refresh>30m</refresh>
+    <refreshType>delay</refreshType>
+  </search>
+  <search base="patient_initial_base">
+    <query>
+<!-- patient_initial_base -->
+      | stats max(_time) as mt
+      | eval max_date=strftime(mt, "%Y/%m/%d %H:%M")
+      | fields max_date
+    </query>
+    <progress>
+      <set token="last_date">-</set>
+    </progress>
+    <done>
+      <set token="last_date">$result.max_date$</set>
+    </done>
+  </search>
+  <search id="patient_base" base="patient_initial_base">
+    <query>
+<!-- patient_initial_base -->
+    </query>
+  </search>
+  <search id="perday_patient_initial_base">
+    <query>
+      | inputlookup nhkperdaydata
+    </query>
+    <earliest></earliest>
+    <latest></latest>
+    <sampleRatio>1</sampleRatio>
+    <refresh>30m</refresh>
+    <refreshType>delay</refreshType>
+  </search>
+  <search base="perday_patient_initial_base">
+    <query>
+<!-- perday_patient_initial_base -->
+      | stats max(_time) as mt
+      | eval max_date=strftime(mt, "%Y/%m/%d %H:%M")
+      | fields max_date
+    </query>
+    <progress>
+      <set token="perday_last_date">-</set>
+    </progress>
+    <done>
+      <set token="perday_last_date">$result.max_date$</set>
+    </done>
+  </search>
+  <search id="perday_patient_base" base="perday_patient_initial_base">
+    <query>
+<!-- perday_patient_initial_base -->
+    </query>
+  </search>
+  <fieldset submitButton="false" autoRun="true"></fieldset>
+  <row>
+    <panel>
+      <title>データソース:</title>
+      <html>
+        <ul>
+          <li>
+            <a href="https://www3.nhk.or.jp/news/special/coronavirus/data/" target="_blank">特設サイト 新型コロナウイルス 都道府県別の感染者数・感染者マップ｜NHK</a>
+          </li>
+          <li>
+            マップタイル出典: 
+              <ul>
+                <li>
+                  <a href="https://cran.r-project.org/web/packages/NipponMap/index.html" target="_blank">"NipponMap" (https://cran.r-project.org/web/packages/NipponMap/index.html)</a>
+                </li>
+                <li>
+                  <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">地理院タイル (https://maps.gsi.go.jp/development/ichiran.html)</a>
+                </li>
+              </ul>
+          </li>
+        </ul>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>感染者数累積 ($last_date$ 現在)</title>
+      <single>
+        <search base="patient_base">
+          <query>
+<!-- patient_base -->
+            | addtotals fieldname=confirmedCumulative
+            | fields _time, confirmedCumulative
+          </query>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0xFFFFFF","0xff88ff","0xffcccc","0xff8888","0xff4444","0xff0000"]</option>
+        <option name="rangeValues">[0,2000,4000,8000,10000]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unit">名</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">1</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>1日の感染者数 ($perday_last_date$ 現在)</title>
+      <single>
+        <search base="perday_patient_base">
+          <query>
+<!-- perday_patient_base -->
+            | addtotals fieldname=confirmedDaily
+            | fields _time, confirmedDaily
+          </query>
+        </search>
+        <option name="colorBy">trend</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0xFFFFFF","0xff88ff","0xffcccc","0xff8888","0xff4444","0xff0000"]</option>
+        <option name="rangeValues">[0,100,500,1000,5000]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">inverse</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unit">名</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">1</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>NHK データ</title>
+      <input type="dropdown" token="nhk_time" searchWhenChanged="true">
+        <label>期間</label>
+        <default>0</default>
+        <choice value="0">全期間</choice>
+        <choice value="@w1">今週</choice>
+        <choice value="-1w@w1">先週</choice>
+        <choice value="-2w@w1">2週間前</choice>
+        <choice value="@mon">今月</choice>
+        <choice value="-1mon@mon">先月</choice>
+        <choice value="-2mon@mon">先々月</choice>
+        <choice value="-3mon@mon">3ヶ月</choice>
+        <choice value="-4mon@mon">4ヶ月</choice>
+        <choice value="-5mon@mon">5ヶ月</choice>
+        <choice value="-6mon@mon">6ヶ月</choice>
+        <initialValue>0</initialValue>
+      </input>
+      <input type="multiselect" token="nhk_prefecture" searchWhenChanged="true">
+        <label>県選択</label>
+        <choice value="*">全県</choice>
+        <default>*</default>
+        <prefix/>
+        <suffix/>
+        <initialValue>*</initialValue>
+        <valuePrefix></valuePrefix>
+        <valueSuffix></valueSuffix>
+        <delimiter> </delimiter>
+        <fieldForLabel>都道府県</fieldForLabel>
+        <fieldForValue>都道府県</fieldForValue>
+        <search>
+          <query>
+            | inputlookup prefecturelist
+            | fields "都道府県"
+          </query>
+        </search>
+      </input>
+      <input type="radio" token="total_search" searchWhenChanged="true">
+        <label>合計表示選択</label>
+        <choice value="addtotals fieldname=&quot;合計&quot;">表示</choice>
+        <choice value="eval _dummy=0">非表示</choice>
+        <default>eval _dummy=0</default>
+        <initialValue>eval _dummy=0</initialValue>
+      </input>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>累積数 (NHK データ) 縦軸は対数軸</title>
+      <chart>
+        <search base="patient_base">
+          <query>
+<!-- patient_base -->
+            | eval start=if("$nhk_time$"=="0" OR "$nhk_time$"=="",0,relative_time(now(), "$nhk_time$"))
+            | where start&lt;=_time 
+            | fields - start
+            | fields $nhk_prefecture$
+            | $total_search$
+            | transpose 0 header_field=_time
+            | addtotals fieldname=sum
+            | sort 0 - sum
+            | fields - sum
+            | transpose 0 header_field=column column_name=_time
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.text">日付</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">log</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">1</option>
+        <option name="charting.axisY2.scale">log</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.chart.overlayFields">合計</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">500</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>1日ごとの発表数 (NHK データ) 縦軸は対数軸</title>
+      <chart>
+        <search base="perday_patient_base">
+          <query>
+<!-- perday_patient_base -->
+            | eval start=if("$nhk_time$"=="0" OR "$nhk_time$"=="",0,relative_time(now(), "$nhk_time$"))
+            | where start&lt;=_time
+            | fields - start
+            | fields $nhk_prefecture$
+            | $total_search$
+            | transpose 0 header_field=_time
+            | addtotals fieldname=sum
+            | sort 0 - sum
+            | fields - sum
+            | transpose 0 header_field=column column_name=_time
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.text">日付</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">log</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">1</option>
+        <option name="charting.axisY2.scale">log</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.overlayFields">合計</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">500</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>県別感染者マップ</title>
+      <map>
+        <search base="current_table">
+          <query>
+<!-- current_table -->
+            | lookup prefecturelist "都道府県" OUTPUT Prefecture
+            | eval count=log(current)
+            | fields - "都道府県" current
+            | where !isnull(count)
+            | geom nipponmap featureIdField=Prefecture
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="height">800</option>
+        <option name="mapping.choroplethLayer.colorBins">9</option>
+        <option name="mapping.choroplethLayer.colorMode">auto</option>
+        <option name="mapping.choroplethLayer.maximumColor">0xff0000</option>
+        <option name="mapping.choroplethLayer.minimumColor">0x62b3b2</option>
+        <option name="mapping.choroplethLayer.neutralPoint">0</option>
+        <option name="mapping.choroplethLayer.shapeOpacity">0.6</option>
+        <option name="mapping.choroplethLayer.showBorder">1</option>
+        <option name="mapping.data.maxClusters">100</option>
+        <option name="mapping.legend.placement">none</option>
+        <option name="mapping.map.center">(37.18,138.01)</option>
+        <option name="mapping.map.panning">1</option>
+        <option name="mapping.map.scrollZoom">0</option>
+        <option name="mapping.map.zoom">6</option>
+        <option name="mapping.markerLayer.markerMaxSize">50</option>
+        <option name="mapping.markerLayer.markerMinSize">10</option>
+        <option name="mapping.markerLayer.markerOpacity">0.8</option>
+        <option name="mapping.showTiles">1</option>
+        <option name="mapping.tileLayer.attribution">マップ出典: "NipponMap" for Japanese Map (https://cran.r-project.org/web/packages/NipponMap/index.html)</option>
+        <option name="mapping.tileLayer.maxZoom">7</option>
+        <option name="mapping.tileLayer.minZoom">0</option>
+        <option name="mapping.tileLayer.tileOpacity">1</option>
+        <option name="mapping.type">choropleth</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </map>
+    </panel>
+    <panel>
+      <title>県別感染者グラフ</title>
+      <chart>
+        <search base="current_table">
+          <query>
+<!-- current_table -->
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text">感染者数</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">780</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>地域別感染者マップ</title>
+      <map>
+        <search base="current_table">
+          <query>
+<!-- patient_base -->
+<!-- current_table -->
+            | lookup capitaljapan "都道府県" outputnew googlelat as lat, googlelong as lon
+            | geostats globallimit=0 maxzoomlevel=18 sum(current) by "都道府県"
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="height">740</option>
+        <option name="mapping.choroplethLayer.colorBins">5</option>
+        <option name="mapping.choroplethLayer.colorMode">auto</option>
+        <option name="mapping.choroplethLayer.maximumColor">0xaf575a</option>
+        <option name="mapping.choroplethLayer.minimumColor">0x62b3b2</option>
+        <option name="mapping.choroplethLayer.neutralPoint">0</option>
+        <option name="mapping.choroplethLayer.shapeOpacity">0.75</option>
+        <option name="mapping.choroplethLayer.showBorder">1</option>
+        <option name="mapping.data.maxClusters">50</option>
+        <option name="mapping.legend.placement">bottomright</option>
+        <option name="mapping.map.center">(36.19,136.82)</option>
+        <option name="mapping.map.panning">1</option>
+        <option name="mapping.map.scrollZoom">0</option>
+        <option name="mapping.map.zoom">7</option>
+        <option name="mapping.markerLayer.markerMaxSize">150</option>
+        <option name="mapping.markerLayer.markerMinSize">50</option>
+        <option name="mapping.markerLayer.markerOpacity">1</option>
+        <option name="mapping.showTiles">1</option>
+        <option name="mapping.tileLayer.attribution">マップ出典: 地理院タイル (https://maps.gsi.go.jp/development/ichiran.html)</option>
+        <option name="mapping.tileLayer.maxZoom">18</option>
+        <option name="mapping.tileLayer.minZoom">5</option>
+        <option name="mapping.tileLayer.tileOpacity">0.75</option>
+        <option name="mapping.tileLayer.url">https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png</option>
+        <option name="mapping.type">marker</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </map>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>県別累積数</title>
+      <table>
+        <search base="patient_base" id="current_table">
+          <query>
+<!-- patient_base -->
+            | stats last(*) as *
+            | eval column="current"
+            | transpose 0 header_field=column column_name="都道府県"
+            | sort 0 - current
+          </query>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">true</option>
+        <option name="totalsRow">true</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+    <panel>
+      <title>県別割合</title>
+      <chart>
+        <search base="current_table">
+          <query>
+<!-- patient_base -->
+<!-- current_table -->
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">300</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>県別割合 (昨日発表1日分)</title>
+      <chart>
+        <search base="perday_patient_base">
+          <query>
+<!-- perday_patient_base -->
+            | stats last(*) as *
+            | eval column="current"
+            | transpose 0 header_field=column column_name="都道府県"
+            | sort 0 - current
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">314</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+</form>

@@ -1,0 +1,687 @@
+<form theme="dark">
+  <label>COVID19 Japan Alternative</label>
+  <description>Using Data of "Coronavirus Disease (COVID-19) Japan Tracker" (https://covid19japan.com/) and "NipponMap" for Japanese Map (https://cran.r-project.org/web/packages/NipponMap/index.html)</description>
+  <init>
+    <set token="last_date">-</set>
+    <unset token="first_date"></unset>
+    <unset token="debug">true</unset>
+    <set token="predict_flag">0</set>
+    <unset token="use_predict"></unset>
+    <set token="predict_query_prefix">| eval _dummy="</set>
+    <set token="predict_query_postfix">"</set>
+  </init>
+  <fieldset submitButton="false" autoRun="true"></fieldset>
+  <row>
+    <panel>
+      <title>データソース:</title>
+      <html>
+        <ul>
+          <li>
+            <a href="https://covid19japan.com/" target="_blank">"Coronavirus Disease (COVID-19) Japan Tracker" (https://covid19japan.com/) (2020年4月14日 更新停止)</a>
+          </li>
+          <li>
+            マップタイル出典: 
+              <ul>
+                <li>
+                  <a href="https://cran.r-project.org/web/packages/NipponMap/index.html" target="_blank">"NipponMap" (https://cran.r-project.org/web/packages/NipponMap/index.html)</a>
+                </li>
+                <li>
+                  <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">地理院タイル (https://maps.gsi.go.jp/development/ichiran.html)</a>
+                </li>
+              </ul>
+          </li>
+        </ul>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel depends="$debug$">
+      <title>全件 (デバッグ用)</title>
+      <table>
+        <search id="get_all_patient">
+          <query>
+            | inputlookup Patient_Data.csv
+            | append 
+                [inputlookup Tokyo.csv]
+            | append
+                [inputlookup Osaka.csv]
+            | append
+                [inputlookup Aichi.csv]
+            | append
+                [inputlookup Kanagawa.csv]
+<!--
+            | append
+                [inputlookup Chiba.csv]
+-->
+            | eval date_announced=strptime('Date Announced', "%F")
+            | eval date_added=strptime('Date Added', "%F")
+            | eval _time=strptime(_acquisition_time, "%Y/%m/%d %H:%M:%S -0900")
+            | rename "Patient Number" as patient_number, "Detected Prefecture" as prefecture, "Status" as status, "Deceased" as deceased, "Age Bracket" as age_bracket
+            | fields _time, patient_number, date_announced, date_added, prefecture, status, deceased, age_bracket
+          </query>
+          <earliest>0</earliest>
+          <latest></latest>
+          <refresh>30m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="count">3</option>
+      </table>
+    </panel>
+    <panel depends="$debug$">
+      <title>更新日時 (デバッグ用)</title>
+      <single>
+        <search id="get_last_date" base="get_all_patient">
+          <query>
+<!-- get_all_patient -->
+            | stats max(_time) as mt
+            | eval max_date=strftime(mt, "%Y/%m/%d %H:%M")
+            | fields max_date
+          </query>
+          <progress>
+            <set token="last_date">-</set>
+          </progress>
+          <done>
+            <set token="last_date">$result.max_date$</set>
+          </done>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel depends="$debug$">
+      <title>最古日時 (デバッグ用)</title>
+      <single>
+        <search id="get_first_date" base="get_all_patient">
+          <query>
+<!-- get_all_patient -->
+            | stats min(date_announced) as mt
+            | eval min_date=strftime(mt, "%Y/%m/%d %H:%M")
+            | fields min_date
+          </query>
+          <progress>
+            <unset token="first_date">-</unset>
+          </progress>
+          <done>
+            <set token="first_date">$result.min_date$</set>
+          </done>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+    <panel depends="$debug$">
+      <title>生存者全件 (デバッグ用)</title>
+      <table>
+        <search id="get_alive_patient" base="get_all_patient">
+          <query>
+<!-- get_all_patient -->
+            | where status!="Discharged" AND status!="Unspecified" AND status!="Deceased" AND status!="Recovered"
+            | eval _time=date_announced
+            | fields _time, date_announced, date_added, patient_number, prefecture, status, deceased, age_bracket
+          </query>
+        </search>
+        <option name="count">3</option>
+      </table>
+    </panel>
+    <panel depends="$debug$">
+      <title>生存者 昨日まで (デバッグ用)</title>
+      <table>
+        <search id="get_alive_patient_till_yesterday" base="get_alive_patient">
+          <query>
+<!-- get_alive_patient -->
+            | eval local_latest=relative_time(now(),"-0d@d")
+            | where _time&lt;local_latest
+            | fields _time, date_announced, date_added, patient_number, prefecture, status, deceased, age_bracket
+          </query>
+        </search>
+        <option name="count">3</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel depends="last_date">
+      <title>感染者数累積 ($last_date$ 現在)</title>
+      <single>
+        <search base="get_all_patient">
+          <query>
+<!-- get_all_patient -->
+            | stats count
+          </query>
+        </search>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="height">101</option>
+        <option name="rangeColors">["0xFFFFFF","0xff88ff","0xffcccc","0xff8888","0xff4444","0xff0000"]</option>
+        <option name="rangeValues">[0,2000,4000,8000,10000]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">感染者累積</option>
+        <option name="unit">名</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel depends="last_date">
+      <title>感染者数 ($last_date$ 現在)</title>
+      <single>
+        <search base="get_alive_patient">
+          <query>
+<!-- get_alive_patient -->
+            | timechart span=1d count
+            | streamstats sum(count) as count
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0xFFFFFF","0xff88ff","0xffcccc","0xff8888","0xff4444","0xff0000"]</option>
+        <option name="rangeValues">[0,2000,4000,8000,10000]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="underLabel">陽性</option>
+        <option name="unit">名</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel depends="last_date">
+      <title>死亡者数 ($last_date$ 現在)</title>
+      <single>
+        <search base="get_all_patient">
+          <query>
+<!-- get_all_patient -->
+            | where status="Deceased"
+            | timechart count
+            | streamstats sum(count) as count
+          </query>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="height">106</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0xFFFFFF","0xff88ff","0xffcccc","0xff8888","0xff4444","0xff0000"]</option>
+        <option name="rangeValues">[0,50,100,200,500]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="underLabel">死亡</option>
+        <option name="unit">名</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">1</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    <panel depends="last_date">
+      <title>入院者数 ($last_date$ 現在)</title>
+      <single>
+        <search base="get_alive_patient">
+          <query>
+<!-- get_alive_patient -->
+            | where (status="Hospitalized" OR status="Discharged")
+            | timechart span=1d count by status
+            | streamstats sum(Hospitalized) as count
+            | fields _time, count
+          </query>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="height">106</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0xFFFFFF","0xff88ff","0xffcccc","0xff8888","0xff4444","0xff0000"]</option>
+        <option name="rangeValues">[0,200,400,800,1000]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="underLabel">入院中</option>
+        <option name="unit">名</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">1</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel depends="last_date">
+      <title>県別感染者数マップ ($last_date$ 現在)</title>
+      <map>
+        <search base="get_alive_patient">
+          <query>
+<!-- get_alive_patient -->
+            | stats count by prefecture
+            | eval count=log(count)
+            | geom nipponmap featureIdField=prefecture
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="height">800</option>
+        <option name="mapping.choroplethLayer.colorBins">9</option>
+        <option name="mapping.choroplethLayer.colorMode">auto</option>
+        <option name="mapping.choroplethLayer.maximumColor">0xff0000</option>
+        <option name="mapping.choroplethLayer.minimumColor">0x62b3b2</option>
+        <option name="mapping.choroplethLayer.neutralPoint">0</option>
+        <option name="mapping.choroplethLayer.shapeOpacity">0.6</option>
+        <option name="mapping.choroplethLayer.showBorder">1</option>
+        <option name="mapping.data.maxClusters">100</option>
+        <option name="mapping.legend.placement">none</option>
+        <option name="mapping.map.center">(37.18,138.01)</option>
+        <option name="mapping.map.panning">1</option>
+        <option name="mapping.map.scrollZoom">0</option>
+        <option name="mapping.map.zoom">6</option>
+        <option name="mapping.markerLayer.markerMaxSize">50</option>
+        <option name="mapping.markerLayer.markerMinSize">10</option>
+        <option name="mapping.markerLayer.markerOpacity">0.8</option>
+        <option name="mapping.showTiles">1</option>
+        <option name="mapping.tileLayer.maxZoom">7</option>
+        <option name="mapping.tileLayer.minZoom">0</option>
+        <option name="mapping.tileLayer.tileOpacity">1</option>
+        <option name="mapping.tileLayer.attribution">マップ出典: "NipponMap" for Japanese Map (https://cran.r-project.org/web/packages/NipponMap/index.html)</option>
+        <option name="mapping.type">choropleth</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </map>
+    </panel>
+    <panel>
+      <title>県別集計 (対数軸)</title>
+      <chart>
+        <search>
+          <query>
+            | inputlookup prefecturedata
+            | lookup prefecturelist Prefecture OUTPUT "都道府県"
+            | sort - Cases Deaths
+            | where Prefecture!="Total"
+            | eval "都道府県"=if(('都道府県'="" OR isnull('都道府県')),"不明",'都道府県')
+            | rename Cases as "感染", Deaths as "死亡", Recovered as "快復"
+            | fields "都道府県", "感染", "死亡", "快復"
+          </query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">log</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">800</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>感染者数推移</title>
+      <input type="multiselect" token="prefecture" searchWhenChanged="true">
+        <label>県選択</label>
+        <choice value="*">全県</choice>
+        <default>*</default>
+        <prefix>(</prefix>
+        <suffix>)</suffix>
+        <initialValue>*</initialValue>
+        <valuePrefix>prefecture="</valuePrefix>
+        <valueSuffix>"</valueSuffix>
+        <delimiter> OR </delimiter>
+        <fieldForLabel>都道府県</fieldForLabel>
+        <fieldForValue>Prefecture</fieldForValue>
+        <search>
+          <query>
+            | inputlookup prefecturelist
+            | fields "都道府県", "Prefecture"
+          </query>
+        </search>
+      </input>
+      <chart>
+        <title>円の大きさは死亡者数</title>
+        <search base="get_all_patient">
+          <query>
+<!-- get_all_patient -->
+            | search $prefecture$
+            | eval min_time=strptime("2020-01-15","%F")
+            | eval days=floor(((date_announced+86400)-min_time)/86400) 
+            | eval status=case((isnull(status) OR status=="" OR status=="Hospitalized" OR status=="Discharged" OR status=="Recovered" OR status=="Unspecified"),"Infected",
+                                status=="Deceased","Deceased")
+            | eval prefecture=if((isnull(prefecture) OR prefecture==""),"Unspecified",prefecture)
+            | stats count by prefecture, days, status
+            | sort 0 + prefecture, days, status
+            | eval pt=prefecture . "," . days
+            | xyseries pt, status, count
+            | eval pt=split(pt, ",")
+            | eval Prefecture=mvindex(pt, 0), days=mvindex(pt,1)
+            | streamstats current=false sum(Deceased) as d_sum by Prefecture
+            | eval Deceased=if(isnull(d_sum), 0, d_sum) + if(isnull(Deceased),0,Deceased)
+            | streamstats current=false sum(Infected) as i_sum by Prefecture
+            | eval Infected=if(isnull(i_sum), 0, i_sum) + if(isnull(Infected),0,Infected)
+            | sort 0 - Infected
+            | fields Prefecture, days, Infected, Deceased
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">Day0 +</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text">感染者数</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">bubble</option>
+        <option name="charting.chart.bubbleMaximumSize">70</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">400</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>日別感染者数 (昨日分まで) (縦軸は対数軸)</title>
+      <input type="dropdown" token="time_earliest" searchWhenChanged="true">
+        <label>表示開始日</label>
+        <initialValue>-14d@d</initialValue>
+        <choice value="0">全期間</choice>
+        <choice value="-7d@d">過去1週間</choice>
+        <choice value="-14d@d">過去2週間</choice>
+        <choice value="-30d@d">過去30日</choice>
+        <choice value="-2mon@d">過去2か月</choice>
+        <choice value="-3mon@d">過去3か月</choice>
+        <choice value="-6mon@mon">過去6か月</choice>
+        <choice value="-12mon@mon">過去1年</choice>
+        <default>-14d@d</default>
+      </input>
+      <input type="radio" token="predict_flag" searchWhenChanged="true">
+        <label>予測表示</label>
+        <choice value="1">表示</choice>
+        <choice value="0">非表示</choice>
+        <default>0</default>
+        <initialValue>0</initialValue>
+        <change>
+          <condition value="1">
+            <set token="use_predict">1</set>
+            <set token="predict_query_prefix">| predict future_timespan=14 algorithm=LLT</set>
+            <set token="predict_query_postfix"></set>
+          </condition>
+          <condition value="0">
+            <unset token="use_predict"></unset>
+            <set token="predict_query_prefix">| eval _dummy="</set>
+            <set token="predict_query_postfix">"</set>
+          </condition>
+        </change>
+      </input>
+      <input type="multiselect" token="target_prefs" searchWhenChanged="true" depends="$use_predict$">
+        <label>予測対象</label>
+        <default>Tokyo</default>
+        <initialValue>Tokyo</initialValue>
+        <delimiter>,</delimiter>
+        <fieldForLabel>prefecture</fieldForLabel>
+        <fieldForValue>prefecture</fieldForValue>
+        <search base="get_alive_patient_till_yesterday">
+          <query>
+<!-- get_alive_patient_till_yesterday -->
+            | eval local_earliest=if("$time_earliest$"=="0",0,relative_time(now(),"$time_earliest$"))
+            | where _time&gt;=local_earliest
+            | top 10  prefecture
+            | sort -count
+            | fields prefecture
+          </query>
+        </search>
+      </input>
+      <chart>
+        <title>Top 10</title>
+        <search base="get_alive_patient_till_yesterday">
+          <query>
+<!-- get_alive_patient_till_yesterday -->
+            | eval local_earliest=if("$time_earliest$"=="0",0,relative_time(now(),"$time_earliest$"))
+            | where _time&gt;=local_earliest
+            | timechart usenull=f span=1d count by prefecture where sum in top10
+            $predict_query_prefix$ $target_prefs$ $predict_query_postfix$
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.text">公表日付</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">log</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">400</option>
+        <option name="refresh.display">none</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>感染クラスタマップ</title>
+      <map>
+        <search base="get_all_patient">
+          <query>
+<!-- get_all_patient -->
+            | eval _time=date_announced
+            | eval status=case(status=="Hospitalized","入院",status=="Discharged","退院",status=="Recovered","快復",status=="Deceased","死亡",status=="Unspecified","不明",status=="","感染",isnull(status),"感染")
+            | eval prefecture=if(prefecture=="Port Quarantine", "港湾検疫", prefecture)
+            | stats count by status, prefecture
+            | lookup prefecturelist Prefecture as prefecture OUTPUT "都道府県"
+            | eval category='都道府県' . ":" . status
+            | lookup capitaljapan "都道府県" outputnew googlelat as lat, googlelong as lon
+            | fields category, count, lat, lon
+            | geostats globallimit=0 maxzoomlevel=18 sum(count) by category
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="height">662</option>
+        <option name="mapping.choroplethLayer.colorBins">5</option>
+        <option name="mapping.choroplethLayer.colorMode">auto</option>
+        <option name="mapping.choroplethLayer.maximumColor">0xaf575a</option>
+        <option name="mapping.choroplethLayer.minimumColor">0x62b3b2</option>
+        <option name="mapping.choroplethLayer.neutralPoint">0</option>
+        <option name="mapping.choroplethLayer.shapeOpacity">0.75</option>
+        <option name="mapping.choroplethLayer.showBorder">1</option>
+        <option name="mapping.data.maxClusters">100</option>
+        <option name="mapping.legend.placement">bottomright</option>
+        <option name="mapping.map.center">(35.68,137.23)</option>
+        <option name="mapping.map.panning">1</option>
+        <option name="mapping.map.scrollZoom">0</option>
+        <option name="mapping.map.zoom">7</option>
+        <option name="mapping.markerLayer.markerMaxSize">200</option>
+        <option name="mapping.markerLayer.markerMinSize">75</option>
+        <option name="mapping.markerLayer.markerOpacity">0.9</option>
+        <option name="mapping.showTiles">1</option>
+        <option name="mapping.tileLayer.attribution">マップ出典: 地理院タイル (https://maps.gsi.go.jp/development/ichiran.html)</option>
+        <option name="mapping.tileLayer.maxZoom">18</option>
+        <option name="mapping.tileLayer.minZoom">5</option>
+        <option name="mapping.tileLayer.tileOpacity">0.7</option>
+        <option name="mapping.tileLayer.url">https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png</option>
+        <option name="mapping.type">marker</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </map>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>県別状況</title>
+      <table>
+        <search>
+          <query>
+            | inputlookup prefecturedata
+            | sort - Cases Deaths
+            | where Prefecture!="Total"
+            | fields Prefecture, Cases, Deaths, Recovered
+          </query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">true</option>
+        <option name="totalsRow">true</option>
+        <option name="wrap">false</option>
+      </table>
+    </panel>
+    <panel depends="last_date">
+      <title>年代別感染者数割合 ($last_date$ 現在)</title>
+      <chart>
+        <search base="get_all_patient">
+          <query>
+<!-- get_all_patient -->
+            | eval age=if(age_bracket=="","unspecified",lower(age_bracket))
+            | chart count over age
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">401</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel depends="last_date">
+      <title>年代別死亡者数割合 ($last_date$ 現在)</title>
+      <chart>
+        <search base="get_all_patient">
+          <query>
+<!-- get_all_patient -->
+            | where status="Deceased"
+            | eval age=if(age_bracket=="","unspecified",lower(age_bracket))
+            | chart count over age
+            </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">399</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+</form>
