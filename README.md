@@ -137,3 +137,4 @@ COVID19 Japan Dashboard for Splunk
 ## 参考
 
 * [「東京都 新型コロナウイルス感染症対策サイト」から派生した各ページとデータソースの状況 - Qiita](https://qiita.com/msi/items/fad800061808cc92060a)
+* [Splunk による COVID19 日本の状況ダッシュボード - Qiita](https://qiita.com/msi/items/c4151dc2f6e6537e154a)
