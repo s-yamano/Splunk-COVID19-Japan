@@ -130,3 +130,11 @@ COVID19 Japan Dashboard for Splunk
 ## 参考
 
 * [「東京都 新型コロナウイルス感染症対策サイト」から派生した各ページとデータソースの状況 - Qiita](https://qiita.com/msi/items/fad800061808cc92060a)
+
+
+## 変更履歴
+
+|Version|Release Date|Description|
+|:--|:--|:--|
+|0.3.0	|2020/05/03	|Initial Release
+|0.3.1	|2020/05/04	|Saved Search による結果が 0 の場合に lookup テーブルのサイズが 0 になる不具合を修正
