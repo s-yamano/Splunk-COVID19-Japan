@@ -18,6 +18,13 @@ LOGNAME=${LOGNAME:-"$(logname)"}
 export TZ="Asia/Tokyo"
 NOW=$(date "+%Y%m%d%H%M%S")
 
+if type flock > /dev/null 2>&1
+then
+        LOCK_PROGRAM="flock -x -n"
+else
+        LOCK_PROGRAM="lockf -ks -t 0"
+fi
+
 run_script(){
 	sheet="$1"
 	original_file=$2
@@ -26,11 +33,12 @@ run_script(){
 	symlink_path=$5
 	lookup_dir=$6
 	lookup_file=$7
+	lock_file=$8
 
 	cd /var/tmp
 	[ -f ${original_file} ] && mv ${original_file} ${original_file}.backup-${NOW}
 
-	${RUN_SCRIPT} -s "$sheet" -f ${original_file}
+	${LOCK_PROGRAM} ${lock_file} ${RUN_SCRIPT} -s "$sheet" -f ${original_file}
 	[ -f ${original_file} ] || return 255
 
 	chown splunk:splunk ${original_file}
@@ -83,5 +91,6 @@ do
 	ORIGINAL_FILE="${TARGET_PREFIX}-${postfix}-${NOW}.csv"
 	SYMLINK_PATH="${VAR_DIR}/${TARGET_PREFIX}-${postfix}.csv"
 	LOOKUP_FILE="${postfix}.csv"
-	run_script "$sheet" ${ORIGINAL_FILE} ${VAR_DIR} ${RELATIVE_DIR} ${SYMLINK_PATH} ${LOOKUP_DIR} ${LOOKUP_FILE}
+	LOCK_FILE=${VAR_DIR}/${RELATIVE_DIR}/${TARGET_PREFIX}-${postfix}.lock
+	run_script "$sheet" ${ORIGINAL_FILE} ${VAR_DIR} ${RELATIVE_DIR} ${SYMLINK_PATH} ${LOOKUP_DIR} ${LOOKUP_FILE} ${LOCK_FILE}
 done
