@@ -55,13 +55,20 @@ COVID19 Japan Dashboard for Splunk
 
 ## ダッシュボード情報
 
-1. COVID19 Japan
+1. COVID19 Japan  
+	![Screenshot_2020-05-03 COVID19 Japan Splunk 8 0 3-320x729.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/555032/64fa87fa-7c04-ac16-8290-a82fad94fbb7.png)
 	1. [Coronavirus Disease (COVID-19) Japan Tracker](https://covid19japan.com/) をもとにした、日本全国のダッシュボード
+	
 2. COVID19 Japan Analysis  
+	![Screenshot_2020-05-03 COVID19 Japan Analysis Splunk 8 0 3-320x406.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/555032/be9a29d5-dbe0-452e-9682-e59c2186ddf2.png)
 	1. 死亡率、回復率、男女比、年代比などの分析ダッシュボード
+	
 3. COVID19 Japan (specific prefecture)  
+	![Screenshot_2020-05-03 COVID19 Japan (specific prefecture) Splunk 8 0 3-320x367.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/555032/dadd843f-14d7-27cd-50a9-5cb576cbe832.png)
 	1. 各都道府県(選択) の個別ダッシュボード
+	
 4. COVID19 Japan NHK  
+	![Screenshot_2020-05-04 COVID19 Japan NHK Splunk 8 0 3-320-546.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/555032/fda59013-6bd8-02a0-b0b4-a77f18fde6e1.png)
 	1. [特設サイト 新型コロナウイルス 都道府県別の感染者数・感染者マップ｜NHK](https://www3.nhk.or.jp/news/special/coronavirus/data/) の非公式データを利用したダッシュボード
 
 
@@ -130,6 +137,7 @@ COVID19 Japan Dashboard for Splunk
 ## 参考
 
 * [「東京都 新型コロナウイルス感染症対策サイト」から派生した各ページとデータソースの状況 - Qiita](https://qiita.com/msi/items/fad800061808cc92060a)
+* [Splunk による COVID19 日本の状況ダッシュボード - Qiita](https://qiita.com/msi/items/c4151dc2f6e6537e154a)
 
 
 ## 変更履歴
