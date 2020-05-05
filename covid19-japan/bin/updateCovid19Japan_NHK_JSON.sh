@@ -20,6 +20,13 @@ NOW=$(date "+%Y%m%d%H%M%S")
 
 NHK_URL="https://www3.nhk.or.jp/news/special/coronavirus/data"
 
+if type flock > /dev/null 2>&1
+then
+        LOCK_PROGRAM="flock -x -n"
+else
+        LOCK_PROGRAM="lockf -ks -t 0"
+fi
+
 run_script(){
 	target="$1"
 	original_file=$2
@@ -33,7 +40,7 @@ run_script(){
 	cd /var/tmp
 	[ -f ${original_file} ] && mv ${original_file} ${original_file}.backup-${NOW}
 
-	flock -n ${lock_file} ${RUN_SCRIPT} -q -T 60 -O ${original_file} ${NHK_URL}/$target.json
+	${LOCK_PROGRAM} ${lock_file} ${RUN_SCRIPT} -q -T 60 -O ${original_file} ${NHK_URL}/$target.json
 	[ -f ${original_file} ] || return 255
 	echo "" >> ${original_file}
 
