@@ -144,5 +144,6 @@ COVID19 Japan Dashboard for Splunk
 
 |Version|Release Date|Description|
 |:--|:--|:--|
-|0.3.0	|2020/05/03	|Initial Release
+|0.3.2	|2020/05/05	|昨日公表分の日付表示不具合を修正
 |0.3.1	|2020/05/04	|Saved Search による結果が 0 の場合に lookup テーブルのサイズが 0 になる不具合を修正
+|0.3.0	|2020/05/03	|Initial Release
