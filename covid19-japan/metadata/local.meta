@@ -197,11 +197,44 @@ version = 8.0.3
 export = none
 version = 8.0.3
 
-[app/install/install_source_checksum]
-version = 8.0.3
-
 [savedsearches/gen_covid19japan_nhk_47newpatients_data_csv]
 version = 8.0.3
 
 [savedsearches/gen_covid19japan_nhk_47patients_data_csv]
+version = 8.0.3
+
+[lookups/47newpatients-data.csv]
+export = none
+version = 8.0.3
+
+[lookups/47patients-data.csv]
+export = none
+version = 8.0.3
+
+[lookups/Tokyo_Counts.csv]
+export = none
+version = 8.0.3
+
+[lookups/covid19japan_confirmed_by_prefecture_summary.csv]
+export = none
+version = 8.0.3
+
+[lookups/covid19japan_daily_summary.csv]
+export = none
+version = 8.0.3
+
+[lookups/covid19japan_deceased_by_prefecture_summary.csv]
+export = none
+version = 8.0.3
+
+[lookups/covid19japan_nhk_47newpatients_data.csv]
+export = none
+version = 8.0.3
+
+[lookups/covid19japan_nhk_47patients_data.csv]
+export = none
+version = 8.0.3
+
+[lookups/covid19japan_summary.csv]
+export = none
 version = 8.0.3
