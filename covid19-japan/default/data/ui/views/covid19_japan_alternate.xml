@@ -10,6 +10,13 @@
     <set token="predict_query_prefix">| eval _dummy="</set>
     <set token="predict_query_postfix">"</set>
   </init>
+  <search id="annotation_base">
+    <query>
+      | inputlookup covid19japan_events.csv
+      | fields _time, annotation_label, annotation_category, annotation_color
+    </query>
+    <refresh>30m</refresh>
+  </search>
   <fieldset submitButton="false" autoRun="true"></fieldset>
   <row>
     <panel>
@@ -17,7 +24,7 @@
       <html>
         <ul>
           <li>
-            <a href="https://covid19japan.com/" target="_blank">"Coronavirus Disease (COVID-19) Japan Tracker" (https://covid19japan.com/) (2020年4月14日 更新停止)</a>
+            <a href="https://covid19japan.com/" target="_blank">"Coronavirus Disease (COVID-19) Japan Tracker" (https://covid19japan.com/)</a>
           </li>
           <li>
             マップタイル出典: 
@@ -481,6 +488,11 @@
             | where _time&gt;=local_earliest
             | timechart usenull=f span=1d count by prefecture where sum in top10
             $predict_query_prefix$ $target_prefs$ $predict_query_postfix$
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
           </query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>

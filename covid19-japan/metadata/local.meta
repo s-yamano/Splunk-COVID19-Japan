@@ -11,6 +11,7 @@ version = 8.0.3
 version = 8.0.3
 
 [views/covid19_japan]
+export = none
 version = 8.0.3
 
 [nav/default]
@@ -191,6 +192,7 @@ version = 8.0.3
 version = 8.0.3
 
 [views/covid19_japan_analysis]
+export = none
 version = 8.0.3
 
 [views/covid19_japan_specific_prefecture]
@@ -201,14 +203,6 @@ version = 8.0.3
 version = 8.0.3
 
 [savedsearches/gen_covid19japan_nhk_47patients_data_csv]
-version = 8.0.3
-
-[lookups/47newpatients-data.csv]
-export = none
-version = 8.0.3
-
-[lookups/47patients-data.csv]
-export = none
 version = 8.0.3
 
 [lookups/Tokyo_Counts.csv]
@@ -236,5 +230,13 @@ export = none
 version = 8.0.3
 
 [lookups/covid19japan_summary.csv]
+export = none
+version = 8.0.3
+
+[views/covid19_japan_alternate]
+export = none
+version = 8.0.3
+
+[lookups/covid19japan_events.csv]
 export = none
 version = 8.0.3

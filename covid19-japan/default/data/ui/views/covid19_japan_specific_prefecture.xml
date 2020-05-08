@@ -10,6 +10,13 @@
     <set token="predict_query_postfix">"</set>
     <set token="map_center">(35.66,139.54)</set>
   </init>
+  <search id="annotation_base">
+    <query>
+      | inputlookup covid19japan_events.csv
+      | fields _time, annotation_label, annotation_category, annotation_color
+    </query>
+    <refresh>30m</refresh>
+  </search>
   <search>
     <query>
       | inputlookup prefecturelist
@@ -696,6 +703,11 @@
             | $predict_query_prefix$$target_prefecture_ja$$predict_query_postfix$
           </query>
         </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
         <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
         <option name="charting.axisTitleX.text">日付</option>
@@ -832,6 +844,11 @@
             | $predict_query_prefix$$target_prefecture_ja$$predict_query_postfix$
           </query>
         </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
         <option name="height">300</option>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
         <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
@@ -878,6 +895,11 @@
 <!-- prefectures_all_base -->
 <!-- daily_cofirmed_base -->
 <!-- daily_single_prefecture_confirmed -->
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
           </query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
@@ -979,6 +1001,11 @@
             | fillnull value=0 daily_confirmed_rate
             | eval constant=1
             | timechart span=1d values(daily_confirmed_rate) as "感染者前日比", values(constant) as "増減境界"
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
           </query>
         </search>
         <option name="height">400</option>

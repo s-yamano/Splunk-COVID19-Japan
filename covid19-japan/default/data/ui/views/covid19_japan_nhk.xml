@@ -4,6 +4,13 @@
     <set token="last_date">-</set>
     <set token="perday_last_date">-</set>
   </init>
+  <search id="annotation_base">
+    <query>
+      | inputlookup covid19japan_events.csv
+      | fields _time, annotation_label, annotation_category, annotation_color
+    </query>
+    <refresh>30m</refresh>
+  </search>
   <search id="patient_initial_base">
     <query>
       | inputlookup nhkdata
@@ -212,6 +219,11 @@
             | transpose 0 header_field=column column_name=_time
           </query>
         </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
         <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
         <option name="charting.axisTitleX.text">日付</option>
@@ -265,6 +277,11 @@
             | sort 0 - sum
             | fields - sum
             | transpose 0 header_field=column column_name=_time
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
           </query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>

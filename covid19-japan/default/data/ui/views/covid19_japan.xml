@@ -15,6 +15,13 @@
     <set token="map.lat.value">NONE</set>
     <set token="map.lon.value">NONE</set>
   </init>
+  <search id="annotation_base">
+    <query>
+      | inputlookup covid19japan_events.csv
+      | fields _time, annotation_label, annotation_category, annotation_color
+    </query>
+    <refresh>30m</refresh>
+  </search>
   <fieldset submitButton="false" autoRun="true"></fieldset>
   <row>
     <panel>
@@ -690,7 +697,12 @@
     </panel>
     <panel>
       <chart>
-        <title>縦軸は線形軸</title>
+        <title>縦軸は対数軸</title>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
         <search base="prefectures_all_base">
           <query>
 <!-- prefectures_all_base -->
@@ -720,7 +732,7 @@
         <option name="charting.axisX.abbreviation">none</option>
         <option name="charting.axisX.scale">linear</option>
         <option name="charting.axisY.abbreviation">none</option>
-        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY.scale">log</option>
         <option name="charting.axisY2.abbreviation">none</option>
         <option name="charting.axisY2.enabled">0</option>
         <option name="charting.axisY2.scale">inherit</option>
@@ -806,6 +818,11 @@
     <panel>
       <chart>
         <title>縦軸は線形軸</title>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
         <search base="daily_cofirmed_base">
           <query>
 <!-- prefectures_all_base -->
@@ -816,7 +833,7 @@
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
         <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
         <option name="charting.axisTitleX.text">公表日付</option>
-        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
         <option name="charting.axisTitleY.visibility">visible</option>
         <option name="charting.axisTitleY2.visibility">visible</option>
         <option name="charting.axisX.abbreviation">none</option>
@@ -853,6 +870,11 @@
     <panel>
       <chart>
         <title>縦軸は対数軸</title>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
         <search base="daily_cofirmed_base">
           <query>
 <!-- prefectures_all_base -->
@@ -863,7 +885,7 @@
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
         <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
-        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
         <option name="charting.axisTitleY.visibility">visible</option>
         <option name="charting.axisTitleY2.visibility">visible</option>
         <option name="charting.axisX.abbreviation">none</option>
