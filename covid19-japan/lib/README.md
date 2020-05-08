@@ -13,7 +13,7 @@
 
 ```
 cd lib/		# このディレクトリ
-pip3 -r requirements.txt -t .
+pip3 install -r requirements.txt -t .
 ```
 
 ## COVID19 Japan Alternative の有効化
