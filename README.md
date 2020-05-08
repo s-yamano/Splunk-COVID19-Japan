@@ -49,7 +49,7 @@ COVID19 Japan Dashboard for Splunk
 このダッシュボード (COVID19 Japan Alternative) を利用する場合には、スクリプトによるデータ入力を有効にします。
 
 1. `cd $SPLUNK_HOME/etc/apps/covid19-japan/lib`
-2. (書き込み権限のあるユーザで) `pip3 -r requirements.txt -t .`
+2. (書き込み権限のあるユーザで) `pip3 install -r requirements.txt -t .`
 3. [設定]-[データ入力]-[スクリプト]  
 	`$SPLUNK_HOME/etc/apps/covid19-japan/bin/updateCovid19JapanCSV.sh` を「有効」にします。
 
@@ -144,6 +144,7 @@ COVID19 Japan Dashboard for Splunk
 
 |Version|Release Date|Description|
 |:--|:--|:--|
+|0.3.4	|2020/05/08	|annotation を追加。対数軸等の修正を追加。
 |0.3.3	|2020/05/05	|データ取得スクリプトで flock がない場合には lockf を使用するように修正
 |0.3.2	|2020/05/05	|昨日公表分の日付表示不具合を修正
 |0.3.1	|2020/05/04	|Saved Search による結果が 0 の場合に lookup テーブルのサイズが 0 になる不具合を修正
