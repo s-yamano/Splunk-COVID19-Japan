@@ -71,7 +71,9 @@ COVID19 Japan Dashboard for Splunk
 	![Screenshot_2020-05-04 COVID19 Japan NHK Splunk 8 0 3-320-546.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/555032/fda59013-6bd8-02a0-b0b4-a77f18fde6e1.png)
 	1. [特設サイト 新型コロナウイルス 都道府県別の感染者数・感染者マップ｜NHK](https://www3.nhk.or.jp/news/special/coronavirus/data/) の非公式データを利用したダッシュボード
 
-
+5. COVID19 Japan Toyo Keizai Online  
+	![COVID19 Japan Toyo Keizai Online Screenshot](https://user-images.githubusercontent.com/62424650/81471263-e666cd00-922a-11ea-9fd0-059ef26a7777.png)
+	1. [新型コロナウイルス 国内感染の状況](https://toyokeizai.net/sp/visual/tko/covid19/) のデータを用いて、同ページをエミュレートしたダッシュボード
 
 ## 制限/注意事項
 
@@ -83,7 +85,7 @@ COVID19 Japan Dashboard for Splunk
 3. JSON データをそのまま読み込んで Splunk で加工しています。  
 	その際、JSON の構造により、メモリの消費量が大きくなるため、SavedSearch (アラート) で CSV ファイルに加工しています。
 
-
+4. 最初のデータ取り込みが行われるまで、"COVID19 Japan Analysis" ダッシュボードの一部のパネルが表示されません。
 
 
 ## データソース
@@ -100,6 +102,8 @@ COVID19 Japan Dashboard for Splunk
 * [特設サイト 新型コロナウイルス 都道府県別の感染者数・感染者マップ｜NHK](https://www3.nhk.or.jp/news/special/coronavirus/data/)
 	* [日本国内の感染確認者数の推移 累計値 (JSON)](https://www3.nhk.or.jp/news/special/coronavirus/data/47patients-data.json)
 	* [日本国内の感染確認者数の推移 １日ごとの発表数 (JSON)](https://www3.nhk.or.jp/news/special/coronavirus/data/47newpatients-data.json)
+* [新型コロナウイルス 国内感染の状況 - 東洋経済オンライン](https://toyokeizai.net/sp/visual/tko/covid19/)
+	* [kaz-ogiwara/covid19 - GitHub](https://github.com/kaz-ogiwara/covid19/)
 
 一次データについては、各サイトのページをご覧ください。
 
