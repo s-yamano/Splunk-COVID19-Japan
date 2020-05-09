@@ -25,6 +25,18 @@ version = 8.0.3
 export = system
 version = 8.0.3
 
+[lookups/PrefecturesList.csv]
+export = system
+version = 8.0.3
+
+[transforms/prefecturelist]
+export = system
+version = 8.0.3
+
+[transforms/prefectureslist]
+export = system
+version = 8.0.3
+
 [indexes/covid19japan]
 version = 8.0.3
 
@@ -128,12 +140,8 @@ version = 8.0.3
 export = none
 version = 8.0.3
 
-[lookups/PrefecturesList.csv]
-export = system
-version = 8.0.3
-
-[transforms/prefecturelist]
-export = system
+[lookups/Tokyo_Counts.csv]
+export = none
 version = 8.0.3
 
 [indexes/covid19japan_nhk]
@@ -205,10 +213,6 @@ version = 8.0.3
 [savedsearches/gen_covid19japan_nhk_47patients_data_csv]
 version = 8.0.3
 
-[lookups/Tokyo_Counts.csv]
-export = none
-version = 8.0.3
-
 [lookups/covid19japan_confirmed_by_prefecture_summary.csv]
 export = none
 version = 8.0.3
@@ -238,5 +242,27 @@ export = none
 version = 8.0.3
 
 [lookups/covid19japan_events.csv]
+export = none
+version = 8.0.3
+
+[views/covid19_japan_toyo_keizai_online]
+version = 8.0.3
+
+[inputs/script%3A%2F%2F%24SPLUNK_HOME%2Fetc%2Fapps%2Fcovid19-japan%2Fbin%2FupdateCovid19Japan_ToyoKeizaiOnline_CSV.sh]
+version = 8.0.3
+
+[lookups/toyo_keizai_online-demography.csv]
+export = none
+version = 8.0.3
+
+[lookups/toyo_keizai_online-prefectures-2.csv]
+export = none
+version = 8.0.3
+
+[lookups/toyo_keizai_online-prefectures.csv]
+export = none
+version = 8.0.3
+
+[lookups/toyo_keizai_online-summary.csv]
 export = none
 version = 8.0.3

@@ -1,0 +1,1685 @@
+<form theme="dark">
+  <init>
+    <set token="confirmed_sma_fields">"移動平均(7日間)"</set>
+    <set token="hospitalized_sma_fields">"移動平均(7日間)"</set>
+    <set token="discharged_sma_fields">"移動平均(7日間)"</set>
+    <set token="discharged_target_fields">日毎:退院者数(未確認分)","日毎:退院者数</set>
+    <set token="inspection_person_sma_fields">"移動平均(7日間)"</set>
+    <set token="inspection_case_sma_fields">"移動平均(7日間)"</set>
+    <set token="critical_sma_fields">"移動平均(7日間)"</set>
+    <set token="deceased_sma_fields">"移動平均(7日間)"</set>
+    <set token="disp_NonPCR">1</set>
+    <unset token="disp_PCR"></unset>
+    <set token="target_prefecture_en">Tokyo</set>
+  </init>
+  <label>COVID19 Japan Toyo Keizai Online</label>
+  <search id="annotation_base">
+    <query>
+      | inputlookup covid19japan_events.csv
+      | fields _time, annotation_label, annotation_category, annotation_color
+    </query>
+    <refresh>1h</refresh>
+  </search>
+  <search id="summary_base">
+    <query>
+      | inputlookup toyo_keizai_online-summary.csv
+      | eval _time=strptime('年' . "-" . '月' . "-" . '日', "%F")
+      | fields - "年", "月", "日"
+      | fields - URL
+      | fields _time, , "PCR検査陽性者", "有症状者", "無症状者", "入院治療を要する者", "死亡者", "退院者（突合作業中を含む）", "退院者", "PCR検査実施人数", "PCR検査数：合計", "人工呼吸器又は集中治療室に入院している者"
+    </query>
+    <refresh>1h</refresh>
+  </search>
+  <search>
+    <query>
+      | inputlookup toyo_keizai_online-modtime.csv
+      | search filename="toyo_keizai_online-summary.csv"
+      | tail 1
+      | eval modtime=strftime(strptime(modtime,"%FT%T%z"),"%Y/%m/%d %T")
+      | fields modtime
+    </query>
+    <refresh>1h</refresh>
+    <done>
+      <set token="summary_time">$result.modtime$</set>
+    </done>
+  </search>
+  <search base="summary_base" id="confirmed_base">
+    <query>
+<!-- summary_base -->
+      | timechart span=1d values("PCR検査陽性者") as "PCR検査陽性者"
+      | streamstats current=false window=1 values("PCR検査陽性者") as prev_confirmed
+      | fillnull value=0 prev_confirmed
+      | eval "新規陽性者"='PCR検査陽性者'-prev_confirmed
+      | rename "PCR検査陽性者" as "累積陽性者"
+      | streamstats current=true window=7 avg("新規陽性者") as avg, avg("累積陽性者") as cum_avg
+      | eval "移動平均(7日間)"=round(avg,2)
+      | eval "移動平均(累積・7日間)"=round(cum_avg,2)
+      | fields _time, "新規陽性者", "累積陽性者", "移動平均(7日間)", "移動平均(累積・7日間)"
+    </query>
+  </search>
+  <search base="summary_base" id="hospitalized_base">
+    <query>
+<!-- summary_base -->
+      | timechart span=1d values("入院治療を要する者") as "入院治療を要する者"
+      | fillnull value=0 "入院治療を要する者"
+      | streamstats current=false window=1 values("入院治療を要する者") as prev_hospitalized
+      | fillnull value=0 prev_hospitalized
+      | eval "新規入院患者数"='入院治療を要する者'-prev_hospitalized
+      | rename "入院治療を要する者" as "累積入院患者数"
+      | fields - prev_hospitalized
+      | streamstats current=true window=7 avg("新規入院患者数") as avg, avg("累積入院患者数") as cum_avg
+      | eval "移動平均(7日間)"=round(avg,2)
+      | eval "移動平均(累積・7日間)"=round(cum_avg,2)
+      | fields _time, "新規入院患者数", "累積入院患者数", "移動平均(7日間)", "移動平均(累積・7日間)"
+    </query>
+  </search>
+  <search base="summary_base" id="discharged_base">
+    <query>
+<!-- summary_base -->
+      | rename "退院者（突合作業中を含む）" as cum_discharged_all, "退院者" as cum_discharged
+      | eval cum_discharged_all=if(isnull(cum_discharged_all),cum_discharged,cum_discharged_all)
+      | eval cum_unconfirmed_discharged=if(isnull(cum_discharged_all),0,cum_discharged_all-cum_discharged)
+      | streamstats current=false window=1 values(cum_discharged) as prev_cum_discharged
+      | streamstats current=false window=1 values(cum_unconfirmed_discharged) as prev_cum_unconfirmed_discharged
+      | eval "日毎:退院者数"=cum_discharged-prev_cum_discharged, "日毎:退院者数(未確認分)"=cum_unconfirmed_discharged-prev_cum_unconfirmed_discharged
+      | rename cum_discharged as "cumulative: discharged", cum_unconfirmed_discharged as "cumulative: unconfirmed_discharged"
+      | rename cum_discharged_all as "累積退院者数"
+      | streamstats current=true window=7 avg("日毎:退院者数") as avg, avg("日毎:退院者数(未確認分)") as avg2, avg("累積退院者数") as cum_avg
+      | eval "移動平均(7日間)"=round(avg+avg2,2)
+      | eval "移動平均(累積・7日間)"=round(cum_avg,2)
+      | fields _time, "日毎:退院者数(未確認分)", "日毎:退院者数", "累積退院者数", "移動平均(7日間)", "移動平均(累積・7日間)"
+    </query>
+  </search>
+  <search base="summary_base" id="inspection_person_base">
+    <query>
+<!-- summary_base -->
+      | streamstats current=false window=1 values("PCR検査実施人数") as prev_inspection
+      | eval daily_inspection='PCR検査実施人数'-prev_inspection
+      | eval daily_inspection=if(isnull(daily_inspection),'PCR検査実施人数',daily_inspection)
+      | timechart values(daily_inspection) as "日毎PCR検査実施人数", values("PCR検査実施人数") as "PCR検査実施人数"
+      | streamstats current=true window=7 avg("日毎PCR検査実施人数") as avg, avg("PCR検査実施人数") as cum_avg
+      | eval "移動平均(7日間)"=round(avg,2)
+      | eval "移動平均(累積・7日間)"=round(cum_avg,2)
+      | fields _time, "日毎PCR検査実施人数", "PCR検査実施人数", "移動平均(7日間)", "移動平均(累積・7日間)"
+    </query>
+  </search>
+  <search base="summary_base" id="inspection_case_base">
+    <query>
+<!-- summary_base -->
+      | streamstats current=false last("PCR検査数：合計") as prev_inspection
+      | eval daily_inspection='PCR検査数：合計'-prev_inspection
+      | eval daily_inspection=if(isnull(daily_inspection),'PCR検査数：合計',daily_inspection)
+      | rename daily_inspection as "日毎PCR検査件数", "PCR検査数：合計" as "PCR検査件数"
+      | eval "PCR検査件数"=if(isnull('PCR検査件数'),prev_inspection,'PCR検査件数')
+      | streamstats current=true window=7 avg("日毎PCR検査件数") as avg, avg("PCR検査件数") as cum_avg
+      | eval "移動平均(7日間)"=round(avg,2)
+      | eval "移動平均(累積・7日間)"=round(cum_avg,2)
+      | fields _time, "日毎PCR検査件数", "PCR検査件数", "移動平均(7日間)", "移動平均(累積・7日間)"
+    </query>
+  </search>
+  <search base="summary_base" id="critical_base">
+    <query>
+<!-- summary_base -->
+      | streamstats current=false last("人工呼吸器又は集中治療室に入院している者") as prev_critical
+      | eval daily_ciritical='人工呼吸器又は集中治療室に入院している者'-prev_critical
+      | rename daily_ciritical as "新規重症者数", "人工呼吸器又は集中治療室に入院している者" as "重症者数"
+      | streamstats current=true window=7 avg("新規重症者数") as avg, avg("重症者数") as cum_avg
+      | eval "移動平均(7日間)"=round(avg,2)
+      | eval "移動平均(累積・7日間)"=round(cum_avg,2)
+      | fields _time, "新規重症者数", "重症者数", "移動平均(7日間)", "移動平均(累積・7日間)"
+    </query>
+  </search>
+  <search base="summary_base" id="deceased_base">
+    <query>
+<!-- summary_base -->
+      | streamstats current=false last("死亡者") as prev_deceased
+      | eval daily_deceased='死亡者'-prev_deceased
+      | rename daily_deceased as "新規死亡者数", "死亡者" as "死亡者数"
+      | streamstats current=true window=7 avg("新規死亡者数") as avg, avg("死亡者数") as cum_avg
+      | eval "移動平均(7日間)"=round(avg,2)
+      | eval "移動平均(累積・7日間)"=round(cum_avg,2)
+      | fields _time, "新規死亡者数", "死亡者数", "移動平均(7日間)", "移動平均(累積・7日間)"
+    </query>
+  </search>
+  <search id="prefectures_summary_base">
+    <query>
+      | inputlookup toyo_keizai_online-prefectures.csv
+      | eval _time=strptime('年' . "-" . '月' . "-" . '日', "%F")
+      | fields - "年", "月", "日"
+      | rename "患者数（2020年3月28日からは感染者数）" as "感染者", "現在は入院等" as "入院等"
+      | stats values(*) as * by _time, "都道府県"
+      | fields _time, "都道府県", "感染者", "入院等", "死亡者", "退院者"
+    </query>
+    <refresh>1h</refresh>
+  </search>
+  <search>
+    <query>
+      | inputlookup toyo_keizai_online-modtime.csv
+      | search filename="toyo_keizai_online-prefectures.csv"
+      | tail 1
+      | eval modtime=strftime(strptime(modtime,"%FT%T%z"),"%Y/%m/%d %T")
+      | fields modtime
+    </query>
+    <refresh>1h</refresh>
+    <done>
+      <set token="prefectures_time">$result.modtime$</set>
+    </done>
+  </search>
+  <search base="prefectures_summary_base" id="prefectures_confirmed_base">
+    <query>
+<!-- prefectures_summary_base -->
+      | timechart limit=0 values("感染者") as "感染者" by "都道府県"
+      | fields - _span, _spandays
+      | appendpipe 
+          [
+            | stats last(*) as *
+            | eval _time="Total"
+          ]
+      | transpose 0 header_field=_time column_name="都道府県"
+      | sort - Total
+    </query>
+  </search>
+  <search base="prefectures_summary_base" id="prefectures_hospitalized_base">
+    <query>
+<!-- prefectures_summary_base -->
+      | timechart limit=0 values("退院者") as "退院者" by "都道府県"
+      | fields - _span, _spandays
+      | appendpipe 
+          [
+            | stats last(*) as *
+            | eval _time="Total"
+          ]
+      | transpose 0 header_field=_time column_name="都道府県"
+      | sort - Total
+    </query>
+  </search>
+  <search base="prefectures_summary_base" id="prefectures_deceased_base">
+    <query>
+<!-- prefectures_summary_base -->
+      | timechart limit=0 values("死亡者") as "死亡者" by "都道府県"
+      | fields - _span, _spandays
+      | appendpipe 
+          [
+            | stats last(*) as *
+            | eval _time="Total"
+          ]
+      | transpose 0 header_field=_time column_name="都道府県"
+      | sort - Total
+    </query>
+  </search>
+  <search id="inspection_base">
+    <query>
+      | inputlookup toyo_keizai_online-prefectures-2.csv
+      | eval _time=strptime('年' . "-" . '月' . "-" . '日', "%F")
+      | fields - "年", "月", "日"
+      | stats values(*) as * by _time, "都道府県"
+      | eval shortname='都道府県'
+      | join type=outer shortname 
+          [
+            | inputlookup prefecturelist
+            | rename "都道府県略称" as shortname
+            | fields shortname, "都道府県"
+          ]
+      | fields - shortname
+      | fields _time, "都道府県", "PCR検査人数", "PCR検査陽性者数", "検査人数の集計期間に対応する陽性者数", "陽性率"
+    </query>
+    <refresh>1h</refresh>
+  </search>
+  <search>
+    <query>
+      | inputlookup toyo_keizai_online-modtime.csv
+      | search filename="toyo_keizai_online-prefectures-2.csv"
+      | tail 1
+      | eval modtime=strftime(strptime(modtime,"%FT%T%z"),"%Y/%m/%d %T")
+      | fields modtime
+    </query>
+    <refresh>1h</refresh>
+    <done>
+      <set token="prefectures2_time">$result.modtime$</set>
+    </done>
+  </search>
+  <search base="inspection_base" id="prefectures_inspected_base">
+    <query>
+<!-- inspection_base -->
+      | timechart limit=0 values("PCR検査人数") as "PCR検査人数" by "都道府県"
+      | fields - _span, _spandays
+      | appendpipe 
+          [
+            | stats last(*) as *
+            | eval _time="Total"
+          ]
+      | transpose 0 header_field=_time column_name="都道府県"
+      | sort - Total
+    </query>
+  </search>
+  <search>
+    <!-- 英語県名を日本語県名に変換 -->
+    <query>
+      | inputlookup prefecturelist where Prefecture="$target_prefecture_en$"
+      | rename "都道府県" as pref_ja
+      | fields pref_ja
+     </query>
+    <refresh>1h</refresh>
+    <done>
+      <set token="form.target_prefecture">$result.pref_ja$</set>
+      <set token="target_prefecture">$result.pref_ja$</set>
+    </done>
+  </search>
+  <search>
+    <query>
+      | inputlookup toyo_keizai_online-modtime.csv
+      | search filename="toyo_keizai_online-demography.csv"
+      | tail 1
+      | eval modtime=strftime(strptime(modtime,"%FT%T%z"),"%Y/%m/%d %T")
+      | fields modtime
+    </query>
+    <refresh>1h</refresh>
+    <done>
+      <set token="demography_time">$result.modtime$</set>
+    </done>
+  </search>
+  <fieldset submitButton="false" autoRun="true"></fieldset>
+  <row>
+    <panel>
+      <title>データソース</title>
+      <html>
+        <ul>
+          <li>
+            <a href="https://toyokeizai.net/sp/visual/tko/covid19/" target="_blank">"東洋経済オンライン" (https://toyokeizai.net/sp/visual/tko/covid19/)</a>
+            <ul>
+              <li>
+                <a href="https://github.com/kaz-ogiwara/covid19">kaz-ogiwara/covid19: 新型コロナウイルス感染症（COVID-19）の国内における状況を厚生労働省の報道発表資料からビジュアルにまとめた。 - GitHub</a>
+              </li>
+            </ul>
+          </li>
+          <li>
+            マップタイル出典: 
+              <ul>
+                <li>
+                  <a href="https://cran.r-project.org/web/packages/NipponMap/index.html" target="_blank">"NipponMap" (https://cran.r-project.org/web/packages/NipponMap/index.html)</a>
+                </li>
+              </ul>
+          </li>
+        </ul>
+    </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html>
+        <h1>全国の状況</h1>
+        <hr/>
+        <div align="right">更新(取得)日時: $summary_time$</div>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>感染者数</title>
+      <input type="radio" token="confirmed_target" searchWhenChanged="true">
+        <label>新規/累積</label>
+        <choice value="新規陽性者">新規</choice>
+        <choice value="累積陽性者">累積</choice>
+        <default>新規陽性者</default>
+        <initialValue>新規陽性者</initialValue>
+        <prefix/>
+        <suffix/>
+        <change>
+          <condition label="新規">
+            <eval token="confirmed_sma_fields">if($confirmed_sma$=="ON","移動平均(7日間)","")</eval>
+          </condition>
+          <condition>
+            <eval token="confirmed_sma_fields">if($confirmed_sma$=="ON","移動平均(累積・7日間)","")</eval>
+          </condition>
+        </change>
+      </input>
+      <input type="radio" token="confirmed_sma" searchWhenChanged="true">
+        <label>移動平均線</label>
+        <choice value="ON">表示</choice>
+        <choice value="OFF">非表示</choice>
+        <default>ON</default>
+        <initialValue>ON</initialValue>
+        <change>
+          <condition value="ON">
+            <eval token="confirmed_sma_fields">if($confirmed_target$=="新規陽性者","移動平均(7日間)","移動平均(累積・7日間)")</eval>
+          </condition>
+          <condition>
+            <set token="confirmed_sma_fields"></set>
+          </condition>
+        </change>
+      </input>
+      <single>
+        <title>更新(取得)日時: $summary_time$</title>
+        <search base="confirmed_base">
+          <query>
+<!-- confirmed_base -->
+            | fields _time, "累積陽性者"
+          </query>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="height">60</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="underLabel">累積感染者数 (トレンドは前日比)</option>
+        <option name="unit">名</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+      <chart>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
+        <search base="confirmed_base">
+          <query>
+<!-- confirmed_base -->
+            | fields _time, "$confirmed_target$" $confirmed_sma_fields$
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.overlayFields">移動平均(7日間),移動平均(累積・7日間)</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">400</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>要入院患者数</title>
+      <input type="radio" token="hospitalized_target" searchWhenChanged="true">
+        <label>新規/累積</label>
+        <choice value="新規入院患者数">新規</choice>
+        <choice value="累積入院患者数">累積</choice>
+        <default>新規入院患者数</default>
+        <initialValue>新規入院患者数</initialValue>
+        <change>
+          <condition label="新規">
+            <eval token="hospitalized_sma_fields">if($hospitalized_sma$=="ON","移動平均(7日間)","")</eval>
+          </condition>
+          <condition>
+            <eval token="hospitalized_sma_fields">if($hospitalized_sma$=="ON","移動平均(累積・7日間)","")</eval>
+          </condition>
+        </change>
+      </input>
+      <input type="radio" token="hospitalized_sma" searchWhenChanged="true">
+        <label>移動平均線</label>
+        <choice value="ON">表示</choice>
+        <choice value="OFF">非表示</choice>
+        <default>ON</default>
+        <initialValue>ON</initialValue>
+        <change>
+          <condition value="ON">
+            <eval token="hospitalized_sma_fields">if($hospitalized_target$=="新規入院患者数","移動平均(7日間)","移動平均(累積・7日間)")</eval>
+          </condition>
+          <condition>
+            <set token="hospitalized_sma_fields"></set>
+          </condition>
+        </change>
+      </input>
+      <single>
+        <title>更新(取得)日時: $summary_time$</title>
+        <search base="hospitalized_base">
+          <query>
+<!-- hospitalized_base -->
+            | fields _time, "累積入院患者数"
+          </query>
+        </search>
+        <option name="height">60</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="underLabel">累積入院患者数 (トレンドは前日比)</option>
+        <option name="unit">名</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+      <chart>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
+        <search base="hospitalized_base">
+          <query>
+<!-- hospitalized_base -->
+            | fields _time, "$hospitalized_target$" $hospitalized_sma_fields$
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.minimumNumber">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.overlayFields">移動平均(7日間),移動平均(累積・7日間)</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">400</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>退院者数</title>
+      <input type="radio" token="discharged_target" searchWhenChanged="true">
+        <label>新規/累積</label>
+        <choice value="Daily">新規</choice>
+        <choice value="累積退院者数">累積</choice>
+        <default>Daily</default>
+        <initialValue>Daily</initialValue>
+        <change>
+          <condition label="新規">
+            <set token="discharged_target_fields">日毎:退院者数(未確認分)","日毎:退院者数</set>
+            <eval token="discharged_sma_fields">if($discharged_sma$=="ON","移動平均(7日間)","")</eval>
+          </condition>
+          <condition>
+            <set token="discharged_target_fields">累積退院者数</set>
+            <eval token="discharged_sma_fields">if($discharged_sma$=="ON","移動平均(累積・7日間)","")</eval>
+          </condition>
+        </change>
+      </input>
+      <input type="radio" token="discharged_sma" searchWhenChanged="true">
+        <label>移動平均線</label>
+        <choice value="ON">表示</choice>
+        <choice value="OFF">非表示</choice>
+        <default>ON</default>
+        <initialValue>ON</initialValue>
+        <change>
+          <condition value="ON">
+            <eval token="discharged_sma_fields">if($discharged_target$=="Daily","移動平均(7日間)","移動平均(累積・7日間)")</eval>
+          </condition>
+          <condition>
+            <set token="discharged_sma_fields"></set>
+          </condition>
+        </change>
+      </input>
+      <single>
+        <title>更新(取得)日時: $summary_time$</title>
+        <search base="discharged_base">
+          <query>
+<!-- discharged_base -->
+            | fields _time, "累積退院者数"
+          </query>
+        </search>
+        <option name="height">60</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="underLabel">累積退院者数 (トレンドは前日比)</option>
+        <option name="unit">名</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+      <chart>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
+        <search base="discharged_base">
+          <query>
+<!-- discharged_base -->
+            | fields _time, "$discharged_target_fields$" $discharged_sma_fields$
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.overlayFields">移動平均(7日間),移動平均(累積・7日間)</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">400</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>PCR検査人数</title>
+      <input type="radio" token="inspection_person_target" searchWhenChanged="true">
+        <label>新規/累積</label>
+        <choice value="日毎PCR検査実施人数">新規</choice>
+        <choice value="PCR検査実施人数">累積</choice>
+        <default>日毎PCR検査実施人数</default>
+        <initialValue>日毎PCR検査実施人数</initialValue>
+        <change>
+          <condition label="新規">
+            <eval token="inspection_person_sma_fields">if($inspection_person_sma$=="ON","移動平均(7日間)","")</eval>
+          </condition>
+          <condition>
+            <eval token="inspection_person_sma_fields">if($inspection_person_sma$=="ON","移動平均(累積・7日間)","")</eval>
+          </condition>
+        </change>
+      </input>
+      <input type="radio" token="inspection_person_sma" searchWhenChanged="true">
+        <label>移動平均線</label>
+        <choice value="ON">表示</choice>
+        <choice value="OFF">非表示</choice>
+        <default>ON</default>
+        <initialValue>ON</initialValue>
+        <change>
+          <condition value="ON">
+            <eval token="inspection_person_sma_fields">if($inspection_person_target$=="日毎PCR検査実施人数","移動平均(7日間)","移動平均(累積・7日間)")</eval>
+          </condition>
+          <condition>
+            <set token="inspection_person_sma_fields"></set>
+          </condition>
+        </change>
+      </input>
+      <single>
+        <title>更新(取得)日時: $summary_time$</title>
+        <search base="inspection_person_base">
+          <query>
+<!-- inspection_person_base -->
+            | fields _time, "PCR検査実施人数"
+          </query>
+        </search>
+        <option name="height">60</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="underLabel">累積PCR検査実施人数 (トレンドは前日比)</option>
+        <option name="unit">名</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+      <chart>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
+        <search base="inspection_person_base">
+          <query>
+<!-- inspection_person_base -->
+            | fields _time, "$inspection_person_target$" $inspection_person_sma_fields$
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.overlayFields">移動平均(7日間),移動平均(累積・7日間)</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">400</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>PCR検査件数</title>
+      <input type="radio" token="inspection_case_target" searchWhenChanged="true">
+        <label>新規/累積</label>
+        <choice value="日毎PCR検査件数">新規</choice>
+        <choice value="PCR検査件数">累積</choice>
+        <default>日毎PCR検査件数</default>
+        <initialValue>日毎PCR検査件数</initialValue>
+        <change>
+          <condition label="新規">
+            <eval token="inspection_case_sma_fields">if($inspection_case_sma$=="ON","移動平均(7日間)","")</eval>
+          </condition>
+          <condition>
+            <eval token="inspection_case_sma_fields">if($inspection_case_sma$=="ON","移動平均(累積・7日間)","")</eval>
+          </condition>
+        </change>
+      </input>
+      <input type="radio" token="inspection_case_sma" searchWhenChanged="true">
+        <label>移動平均線</label>
+        <choice value="ON">表示</choice>
+        <choice value="OFF">非表示</choice>
+        <default>ON</default>
+        <initialValue>ON</initialValue>
+        <change>
+          <condition value="ON">
+            <eval token="inspection_case_sma_fields">if($inspection_case_target$=="日毎PCR検査件数","移動平均(7日間)","移動平均(累積・7日間)")</eval>
+          </condition>
+          <condition>
+            <set token="inspection_case_sma_fields"></set>
+          </condition>
+        </change>
+      </input>
+      <single>
+        <title>更新(取得)日時: $summary_time$</title>
+        <search base="inspection_case_base">
+          <query>
+<!-- inspection_case_base -->
+            | fields _time, "PCR検査件数"
+          </query>
+        </search>
+        <option name="height">60</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="underLabel">累積PCR検査件数 (トレンドは前日比)</option>
+        <option name="unit">件</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+      <chart>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
+        <search base="inspection_case_base">
+          <query>
+<!-- inspection_case_base -->
+            | fields _time, "$inspection_case_target$" $inspection_case_sma_fields$
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.overlayFields">移動平均(7日間),移動平均(累積・7日間)</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">400</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>重症者数</title>
+      <input type="radio" token="critical_target" searchWhenChanged="true">
+        <label>新規/累積</label>
+        <choice value="新規重症者数">新規</choice>
+        <choice value="重症者数">累積</choice>
+        <default>新規重症者数</default>
+        <initialValue>新規重症者数</initialValue>
+        <change>
+          <condition label="新規">
+            <eval token="critical_sma_fields">if($critical_sma$=="ON","移動平均(7日間)","")</eval>
+          </condition>
+          <condition>
+            <eval token="critical_sma_fields">if($critical_sma$=="ON","移動平均(累積・7日間)","")</eval>
+          </condition>
+        </change>
+      </input>
+      <input type="radio" token="critical_sma" searchWhenChanged="true">
+        <label>移動平均線</label>
+        <choice value="ON">表示</choice>
+        <choice value="OFF">非表示</choice>
+        <default>ON</default>
+        <initialValue>ON</initialValue>
+        <change>
+          <condition value="ON">
+            <eval token="critical_sma_fields">if($critical_target$=="新規重症者数","移動平均(7日間)","移動平均(累積・7日間)")</eval>
+          </condition>
+          <condition>
+            <set token="critical_sma_fields"></set>
+          </condition>
+        </change>
+      </input>
+      <single>
+        <title>更新(取得)日時: $summary_time$</title>
+        <search base="critical_base">
+          <query>
+<!-- critical_base -->
+            | fields _time, "重症者数"
+          </query>
+        </search>
+        <option name="height">60</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="underLabel">重症者数 (トレンドは前日比)</option>
+        <option name="unit">名</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+      <chart>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
+        <search base="critical_base">
+          <query>
+<!-- critical_base -->
+            | fields _time, "$critical_target$" $critical_sma_fields$
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.overlayFields">移動平均(7日間),移動平均(累積・7日間)</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">400</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>死亡者数</title>
+      <input type="radio" token="deceased_target" searchWhenChanged="true">
+        <label>新規/累積</label>
+        <choice value="新規死亡者数">新規</choice>
+        <choice value="死亡者数">累積</choice>
+        <default>新規死亡者数</default>
+        <initialValue>新規死亡者数</initialValue>
+        <change>
+          <condition label="新規">
+            <eval token="deceased_sma_fields">if($deceased_sma$=="ON","移動平均(7日間)","")</eval>
+          </condition>
+          <condition>
+            <eval token="deceased_sma_fields">if($deceased_sma$=="ON","移動平均(累積・7日間)","")</eval>
+          </condition>
+        </change>
+      </input>
+      <input type="radio" token="deceased_sma" searchWhenChanged="true">
+        <label>移動平均線</label>
+        <choice value="ON">表示</choice>
+        <choice value="OFF">非表示</choice>
+        <default>ON</default>
+        <initialValue>ON</initialValue>
+        <change>
+          <condition value="ON">
+            <eval token="deceased_sma_fields">if($deceased_target$=="新規死亡者数","移動平均(7日間)","移動平均(累積・7日間)")</eval>
+          </condition>
+          <condition>
+            <set token="deceased_sma_fields"></set>
+          </condition>
+        </change>
+      </input>
+      <single>
+        <title>更新(取得)日時: $summary_time$</title>
+        <search base="deceased_base">
+          <query>
+<!-- critical_base -->
+            | fields _time, "死亡者数"
+          </query>
+        </search>
+        <option name="height">60</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="underLabel">死亡者数 (トレンドは前日比)</option>
+        <option name="unit">名</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+      <chart>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
+        <search base="deceased_base">
+          <query>
+<!-- deceased_base -->
+            | fields _time, "$deceased_target$" $deceased_sma_fields$
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.overlayFields">移動平均(7日間),移動平均(累積・7日間)</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">400</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>年齢別の感染者数</title>
+      <chart>
+        <title>更新(取得)日時: $demography_time$</title>
+        <search>
+          <query>
+            | inputlookup toyo_keizai_online-demography.csv
+            | fillnull value=0 "死亡", "重症"
+            | eval "軽症・無症状・確認中"='陽性者'-('死亡'+'重症')
+            | fields - "陽性者"
+            | eval "年代"=case('年代'="不明", "00", '年代'="10歳未満", "10", true(), '年代')
+            | sort - str("年代")
+            | eval "年代"=case('年代'="00", "不明", '年代'="10", "10歳未満", true(), '年代')
+            | fields "年代", "死亡", "重症", "軽症・無症状・確認中"
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">580</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel>
+      <html>
+        <!-- dummy panel -->
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html>
+        <h1>各都道府県の状況</h1>
+        <hr/>
+        <div align="right">更新(取得)日時: $prefectures_time$</div>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <input type="dropdown" token="target_status" searchWhenChanged="true">
+        <label></label>
+        <choice value="感染者">感染者数</choice>
+        <choice value="退院者">退院者数</choice>
+        <choice value="死亡者">死亡者数</choice>
+        <choice value="PCR検査人数">PCR検査人数</choice>
+        <default>感染者</default>
+        <initialValue>感染者</initialValue>
+        <change>
+          <condition value="PCR検査人数">
+            <unset token="disp_NonPCR"></unset>
+            <set token="disp_PCR">1</set>
+          </condition>
+          <condition>
+            <set token="disp_NonPCR">1</set>
+            <unset token="disp_PCR"></unset>
+          </condition>
+        </change>
+      </input>
+    </panel>
+    <panel>
+      <input type="dropdown" token="target_prefecture" searchWhenChanged="true">
+        <label></label>
+        <fieldForLabel>都道府県</fieldForLabel>
+        <fieldForValue>都道府県</fieldForValue>
+        <search>
+          <query>
+            | inputlookup prefecturelist
+            | fields "都道府県", "Prefecture"
+          </query>
+        </search>
+        <default>東京都</default>
+        <initialValue>東京都</initialValue>
+      </input>
+    </panel>
+    <panel>
+      <html>
+<!-- dummy -->        
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel depends="$disp_NonPCR$">
+      <map>
+        <search base="prefecture_status">
+          <query>
+<!-- prefectures_summary_base -->
+            | lookup prefecturelist "都道府県" OUTPUT Prefecture
+            | fields - "都道府県"
+            | eval count=log('$target_status$')
+            | fields Prefecture, count
+            | geom nipponmap featureIdField=Prefecture
+          </query>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="mapping.choroplethLayer.colorBins">9</option>
+        <option name="mapping.choroplethLayer.colorMode">auto</option>
+        <option name="mapping.choroplethLayer.maximumColor">0xff0000</option>
+        <option name="mapping.choroplethLayer.minimumColor">0x62b3b2</option>
+        <option name="mapping.choroplethLayer.neutralPoint">0</option>
+        <option name="mapping.choroplethLayer.shapeOpacity">0.75</option>
+        <option name="mapping.choroplethLayer.showBorder">1</option>
+        <option name="mapping.data.maxClusters">100</option>
+        <option name="mapping.legend.placement">none</option>
+        <option name="mapping.map.center">(38.24,136.43)</option>
+        <option name="mapping.map.panning">1</option>
+        <option name="mapping.map.scrollZoom">0</option>
+        <option name="mapping.map.zoom">5</option>
+        <option name="mapping.markerLayer.markerMaxSize">50</option>
+        <option name="mapping.markerLayer.markerMinSize">10</option>
+        <option name="mapping.markerLayer.markerOpacity">0.8</option>
+        <option name="mapping.showTiles">1</option>
+        <option name="mapping.tileLayer.attribution">マップ出典: "NipponMap" for Japanese Map</option>
+        <option name="mapping.tileLayer.maxZoom">7</option>
+        <option name="mapping.tileLayer.minZoom">0</option>
+        <option name="mapping.tileLayer.tileOpacity">1</option>
+        <option name="mapping.type">choropleth</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <drilldown>
+          <set token="target_prefecture_en">$click.value$</set>
+        </drilldown>
+      </map>
+      <chart>
+        <title>$target_status$ (更新(取得)日時: $prefectures_time$)</title>
+        <search base="prefectures_summary_base" id="prefecture_status">
+          <query>
+<!-- prefectures_summary_base -->
+            | timechart limit=0 values("$target_status$") as "$target_status$" by "都道府県"
+            | fields - _span, _spandays
+            | tail 1
+            | fields - _time
+            | transpose 0 column_name="都道府県"
+            | rename "row 1" as "$target_status$"
+            | sort - "$target_status$"
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">800</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <drilldown>
+          <set token="form.target_prefecture">$click.value$</set>
+          <set token="target_prefecture">$click.value$</set>
+        </drilldown>
+      </chart>
+    </panel>
+    <panel depends="$disp_PCR$">
+      <map>
+        <search base="prefecture_PCR_status">
+          <query>
+<!-- prefecture_PCR_status -->
+            | lookup prefecturelist "都道府県" OUTPUT Prefecture
+            | fields - "都道府県"
+            | eval count=log('PCR検査人数')
+            | fields Prefecture, count
+            | geom nipponmap featureIdField=Prefecture
+          </query>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="mapping.choroplethLayer.colorBins">9</option>
+        <option name="mapping.choroplethLayer.colorMode">auto</option>
+        <option name="mapping.choroplethLayer.maximumColor">0xff0000</option>
+        <option name="mapping.choroplethLayer.minimumColor">0x62b3b2</option>
+        <option name="mapping.choroplethLayer.neutralPoint">0</option>
+        <option name="mapping.choroplethLayer.shapeOpacity">0.75</option>
+        <option name="mapping.choroplethLayer.showBorder">1</option>
+        <option name="mapping.data.maxClusters">100</option>
+        <option name="mapping.legend.placement">none</option>
+        <option name="mapping.map.center">(38.24,136.43)</option>
+        <option name="mapping.map.panning">1</option>
+        <option name="mapping.map.scrollZoom">0</option>
+        <option name="mapping.map.zoom">5</option>
+        <option name="mapping.markerLayer.markerMaxSize">50</option>
+        <option name="mapping.markerLayer.markerMinSize">10</option>
+        <option name="mapping.markerLayer.markerOpacity">0.8</option>
+        <option name="mapping.showTiles">1</option>
+        <option name="mapping.tileLayer.attribution">マップ出典: "NipponMap" for Japanese Map</option>
+        <option name="mapping.tileLayer.maxZoom">7</option>
+        <option name="mapping.tileLayer.minZoom">0</option>
+        <option name="mapping.tileLayer.tileOpacity">1</option>
+        <option name="mapping.type">choropleth</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <drilldown>
+          <set token="target_prefecture_en">$click.value$</set>
+        </drilldown>
+      </map>
+      <chart>
+        <title>$target_status$ (更新(取得)日時: $prefectures2_time$)</title>
+        <search base="inspection_base" id="prefecture_PCR_status">
+          <query>
+<!-- inspection_base -->
+            | timechart limit=0 values("PCR検査人数") as "PCR検査人数" by "都道府県"
+            | fields - _span, _spandays
+            | tail 1
+            | fields - _time
+            | transpose 0 column_name="都道府県"
+            | rename "row 1" as "PCR検査人数"
+            | sort - "PCR検査人数"
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">800</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <drilldown>
+          <set token="target_prefecture">$click.value$</set>
+          <set token="form.target_prefecture">$click.value$</set>
+        </drilldown>
+      </chart>
+    </panel>
+    <panel>
+      <single>
+        <title>$target_prefecture$ の感染者数  (更新(取得)日時: $prefectures_time$)</title>
+        <search base="prefectures_summary_base">
+          <query>
+<!-- prefectures_summary_base -->
+            | search "都道府県"="$target_prefecture$"
+            | fields - "都道府県"
+            | timechart values(*) as *
+            | fields _time, "感染者"
+          </query>
+        </search>
+        <option name="height">60</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="underLabel">感染者累計</option>
+        <option name="unit">名</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+      <chart>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
+        <search base="prefectures_confirmed_base">
+          <query>
+<!-- prefectures_confirmed_base -->
+            | fields - Total
+            | transpose 0 header_field="都道府県" column_name=_time
+          </query>
+        </search>
+        <option name="height">300</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+      <single>
+        <title>$target_prefecture$ の死亡者数 (更新(取得)日時: $prefectures_time$)</title>
+        <search base="prefectures_summary_base">
+          <query>
+<!-- prefectures_summary_base -->
+            | search "都道府県"="$target_prefecture$"
+            | fields - "都道府県"
+            | timechart values(*) as *
+            | fields _time, "死亡者"
+          </query>
+        </search>
+        <option name="height">60</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="underLabel">死亡者累計</option>
+        <option name="unit">名</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+      <chart>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
+        <search base="prefectures_deceased_base">
+          <query>
+<!-- prefectures_deceased_base -->
+            | fields - Total
+            | transpose 0 header_field="都道府県" column_name=_time
+          </query>
+        </search>
+        <option name="height">300</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel>
+      <single>
+        <title>$target_prefecture$ の退院者数 (更新(取得)日時: $prefectures_time$)</title>
+        <search base="prefectures_summary_base">
+          <query>
+<!-- prefectures_summary_base -->
+            | search "都道府県"="$target_prefecture$"
+            | fields - "都道府県"
+            | timechart values(*) as *
+            | fields _time, "退院者"
+          </query>
+        </search>
+        <option name="height">60</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="underLabel">退院者累計</option>
+        <option name="unit">名</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+      <chart>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
+        <search base="prefectures_hospitalized_base">
+          <query>
+<!-- prefectures_hospitalized_base -->
+            | fields - Total
+            | transpose 0 header_field="都道府県" column_name=_time
+          </query>
+        </search>
+        <option name="height">300</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+      <single>
+        <title>$target_prefecture$ のPCR検査人数 (更新(取得)日時: $prefectures2_time$)</title>
+        <search base="inspection_base">
+          <query>
+<!-- inspection_base -->
+            | search "都道府県"="$target_prefecture$"
+            | fields - "都道府県"
+            | timechart values(*) as *
+            | fields _time, "PCR検査人数"
+          </query>
+        </search>
+        <option name="height">60</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="underLabel">PCR検査人数累計</option>
+        <option name="unit">名</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+      <chart>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
+        <search base="prefectures_inspected_base">
+          <query>
+<!-- prefectures_inspected_base -->
+            | fields - Total
+            | transpose 0 header_field="都道府県" column_name=_time
+          </query>
+        </search>
+        <option name="height">300</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+</form>
