@@ -56,10 +56,12 @@
                 [inputlookup Aichi.csv]
             | append
                 [inputlookup Kanagawa.csv]
-<!--
             | append
                 [inputlookup Chiba.csv]
--->
+            | append
+                [inputlookup Hokkaido.csv]
+            | append
+                [inputlookup Saitama.csv]
             | eval date_announced=strptime('Date Announced', "%F")
             | eval date_added=strptime('Date Added', "%F")
             | eval _time=strptime(_acquisition_time, "%Y/%m/%d %H:%M:%S -0900")
