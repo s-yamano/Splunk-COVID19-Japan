@@ -5,6 +5,7 @@
     <view name="covid19_japan_specific_prefecture" />
   </collection>
   <view name="covid19_japan_nhk" />
+  <view name="covid19_japan_toyo_keizai_online" />
   <view name="search" />
   <view name="dashboards" />
 </nav>
