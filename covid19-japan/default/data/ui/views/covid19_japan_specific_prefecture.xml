@@ -13,6 +13,7 @@
   <search id="annotation_base">
     <query>
       | inputlookup covid19japan_events.csv
+      | where annotation_category=="common" OR annotation_category="japan_tracker"
       | fields _time, annotation_label, annotation_category, annotation_color
     </query>
     <refresh>30m</refresh>
@@ -951,6 +952,8 @@
             | eval wday=strptime('日付',"%F")
             | eval wday=strftime(wday, "%w")
             | stats avg(*) as "* (平均)" by wday
+            | eval "日毎感染数 (平均)"=round('日毎感染数 (平均)', 2)
+            | eval "日毎死亡数 (平均)"=round('日毎死亡数 (平均)', 2)
             | eval wday=case(wday=0,"日",wday=1,"月",wday=2,"火",wday=3,"水",wday=4,"木",wday=5,"金",wday=6,"土")
           </query>
         </search>
