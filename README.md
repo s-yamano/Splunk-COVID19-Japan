@@ -148,6 +148,7 @@ COVID19 Japan Dashboard for Splunk
 
 |Version|Release Date|Description|
 |:--|:--|:--|
+|0.4.1	|2020/05/12	|東洋経済オンライン元データの CSV ヘッダ変更に対応。
 |0.4.0	|2020/05/09	|東洋経済オンラインのエミュレート Dashboard を追加。
 |0.3.5	|2020/05/09	|alternative Dashboard 情報元のデータ構造の変更に対応。
 |0.3.4	|2020/05/08	|annotation を追加。対数軸等の修正を追加。
