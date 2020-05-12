@@ -86,7 +86,7 @@ if [ ! -d ${VAR_DIR}/${RELATIVE_DIR} ]
 then
 	mkdir -p ${VAR_DIR}/${RELATIVE_DIR}
 	chown -R ${LOGNAME}:splunk ${VAR_DIR}/${RELATIVE_DIR}
-	chmod -R 03775 ${VAR_DIR}
+	find ${VAR_DIR} -type d -exec chmod 03775 {} \;
 fi
 
 
