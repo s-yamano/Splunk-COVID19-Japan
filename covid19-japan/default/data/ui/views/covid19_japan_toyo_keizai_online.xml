@@ -16,6 +16,7 @@
   <search id="annotation_base">
     <query>
       | inputlookup covid19japan_events.csv
+      | where annotation_category=="common" OR annotation_category="toyo_keizai_online"
       | fields _time, annotation_label, annotation_category, annotation_color
     </query>
     <refresh>1h</refresh>
@@ -23,9 +24,18 @@
   <search id="summary_base">
     <query>
       | inputlookup toyo_keizai_online-summary.csv
-      | eval _time=strptime('年' . "-" . '月' . "-" . '日', "%F")
-      | fields - "年", "月", "日"
+      | eval _time=strptime(year . "-" . month . "-" . date, "%F")
+      | fields - year, month, date
       | fields - URL
+      | rename death as "死亡者", 
+                discharged as "退院者", 
+                cofirming as "退院者（突合作業中を含む）", 
+                hospitalized as "入院治療を要する者",
+                pcr_tested as "PCR検査実施人数", 
+                pcr_tested_positive as "PCR検査陽性者", 
+                cofirming as "確認中", 
+                pcr_tests_total as "PCR検査数：合計", 
+                serious as "人工呼吸器又は集中治療室に入院している者"
       | fields _time, , "PCR検査陽性者", "有症状者", "無症状者", "入院治療を要する者", "死亡者", "退院者（突合作業中を含む）", "退院者", "PCR検査実施人数", "PCR検査数：合計", "人工呼吸器又は集中治療室に入院している者"
     </query>
     <refresh>1h</refresh>
@@ -315,7 +325,7 @@
   </row>
   <row>
     <panel>
-      <title>感染者数</title>
+      <title>PCR検査陽性者数</title>
       <input type="radio" token="confirmed_target" searchWhenChanged="true">
         <label>新規/累積</label>
         <choice value="新規陽性者">新規</choice>
@@ -377,15 +387,15 @@
         <option name="useThousandSeparators">1</option>
       </single>
       <chart>
-        <search type="annotation" base="annotation_base">
-          <query>
-<!-- annotation_base -->
-          </query>
-        </search>
         <search base="confirmed_base">
           <query>
 <!-- confirmed_base -->
             | fields _time, "$confirmed_target$" $confirmed_sma_fields$
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
           </query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
@@ -424,7 +434,7 @@
       </chart>
     </panel>
     <panel>
-      <title>要入院患者数</title>
+      <title>入院治療等を要する者</title>
       <input type="radio" token="hospitalized_target" searchWhenChanged="true">
         <label>新規/累積</label>
         <choice value="新規入院患者数">新規</choice>
@@ -484,15 +494,15 @@
         <option name="useThousandSeparators">1</option>
       </single>
       <chart>
-        <search type="annotation" base="annotation_base">
-          <query>
-<!-- annotation_base -->
-          </query>
-        </search>
         <search base="hospitalized_base">
           <query>
 <!-- hospitalized_base -->
             | fields _time, "$hospitalized_target$" $hospitalized_sma_fields$
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
           </query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
@@ -532,7 +542,7 @@
       </chart>
     </panel>
     <panel>
-      <title>退院者数</title>
+      <title>退院・療養解除</title>
       <input type="radio" token="discharged_target" searchWhenChanged="true">
         <label>新規/累積</label>
         <choice value="Daily">新規</choice>
@@ -594,15 +604,15 @@
         <option name="useThousandSeparators">1</option>
       </single>
       <chart>
-        <search type="annotation" base="annotation_base">
-          <query>
-<!-- annotation_base -->
-          </query>
-        </search>
         <search base="discharged_base">
           <query>
 <!-- discharged_base -->
             | fields _time, "$discharged_target_fields$" $discharged_sma_fields$
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
           </query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
@@ -703,15 +713,15 @@
         <option name="useThousandSeparators">1</option>
       </single>
       <chart>
-        <search type="annotation" base="annotation_base">
-          <query>
-<!-- annotation_base -->
-          </query>
-        </search>
         <search base="inspection_person_base">
           <query>
 <!-- inspection_person_base -->
             | fields _time, "$inspection_person_target$" $inspection_person_sma_fields$
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
           </query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
@@ -810,15 +820,15 @@
         <option name="useThousandSeparators">1</option>
       </single>
       <chart>
-        <search type="annotation" base="annotation_base">
-          <query>
-<!-- annotation_base -->
-          </query>
-        </search>
         <search base="inspection_case_base">
           <query>
 <!-- inspection_case_base -->
             | fields _time, "$inspection_case_target$" $inspection_case_sma_fields$
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
           </query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
@@ -917,15 +927,15 @@
         <option name="useThousandSeparators">1</option>
       </single>
       <chart>
-        <search type="annotation" base="annotation_base">
-          <query>
-<!-- annotation_base -->
-          </query>
-        </search>
         <search base="critical_base">
           <query>
 <!-- critical_base -->
             | fields _time, "$critical_target$" $critical_sma_fields$
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
           </query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
@@ -1026,15 +1036,15 @@
         <option name="useThousandSeparators">1</option>
       </single>
       <chart>
-        <search type="annotation" base="annotation_base">
-          <query>
-<!-- annotation_base -->
-          </query>
-        </search>
         <search base="deceased_base">
           <query>
 <!-- deceased_base -->
             | fields _time, "$deceased_target$" $deceased_sma_fields$
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
           </query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
@@ -1402,16 +1412,16 @@
         <option name="useThousandSeparators">1</option>
       </single>
       <chart>
-        <search type="annotation" base="annotation_base">
-          <query>
-<!-- annotation_base -->
-          </query>
-        </search>
         <search base="prefectures_confirmed_base">
           <query>
 <!-- prefectures_confirmed_base -->
             | fields - Total
             | transpose 0 header_field="都道府県" column_name=_time
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
           </query>
         </search>
         <option name="height">300</option>
@@ -1479,16 +1489,16 @@
         <option name="useThousandSeparators">1</option>
       </single>
       <chart>
-        <search type="annotation" base="annotation_base">
-          <query>
-<!-- annotation_base -->
-          </query>
-        </search>
         <search base="prefectures_deceased_base">
           <query>
 <!-- prefectures_deceased_base -->
             | fields - Total
             | transpose 0 header_field="都道府県" column_name=_time
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
           </query>
         </search>
         <option name="height">300</option>
@@ -1558,16 +1568,16 @@
         <option name="useThousandSeparators">1</option>
       </single>
       <chart>
-        <search type="annotation" base="annotation_base">
-          <query>
-<!-- annotation_base -->
-          </query>
-        </search>
         <search base="prefectures_hospitalized_base">
           <query>
 <!-- prefectures_hospitalized_base -->
             | fields - Total
             | transpose 0 header_field="都道府県" column_name=_time
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
           </query>
         </search>
         <option name="height">300</option>
@@ -1635,16 +1645,16 @@
         <option name="useThousandSeparators">1</option>
       </single>
       <chart>
-        <search type="annotation" base="annotation_base">
-          <query>
-<!-- annotation_base -->
-          </query>
-        </search>
         <search base="prefectures_inspected_base">
           <query>
 <!-- prefectures_inspected_base -->
             | fields - Total
             | transpose 0 header_field="都道府県" column_name=_time
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
           </query>
         </search>
         <option name="height">300</option>

@@ -13,6 +13,7 @@
   <search id="annotation_base">
     <query>
       | inputlookup covid19japan_events.csv
+      | where annotation_category=="common" OR annotation_category="japan_tracker"
       | fields _time, annotation_label, annotation_category, annotation_color
     </query>
     <refresh>30m</refresh>
