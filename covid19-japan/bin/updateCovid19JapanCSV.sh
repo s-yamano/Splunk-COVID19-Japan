@@ -57,19 +57,24 @@ run_script(){
 
 SheetName="
 	Patient Data
-	Tokyo
-	Osaka
 	Aichi
+	Chiba
 	Kanagawa
+	Osaka
+	Saitama
+	Hokkaido
+	Tokyo
 	Prefecture Data
 	Sum By Day
-	Diamond Princess Sum By Day
-	Diamond Princess Patient Data
+	Cruise Sum By Day
 	Tokyo Counts
+	Tokyo Recoveries
+	Recovery Stats
+	Diamond Princess Patient Data
+	Patient Statuses
 "
 
 _future_Sheet_Name="
-	Chiba
 "
 
 TARGET_PREFIX="japan_covid_19_coronavirus_tracker"
