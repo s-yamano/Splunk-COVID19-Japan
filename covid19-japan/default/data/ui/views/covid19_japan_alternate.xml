@@ -300,12 +300,12 @@
         <search>
           <query>
             | inputlookup prefecturedata
-            | lookup prefecturelist Prefecture OUTPUT "都道府県"
+            | rename "Prefecture (ja)" as "都道府県"
             | sort - Cases Deaths
             | where Prefecture!="Total"
             | eval "都道府県"=if(('都道府県'="" OR isnull('都道府県')),"不明",'都道府県')
-            | rename Cases as "感染", Deaths as "死亡", Recovered as "快復"
-            | fields "都道府県", "感染", "死亡", "快復"
+            | rename Cases as "感染", Deaths as "死亡", Recovered as "回復"
+            | fields "都道府県", "感染", "死亡", "回復"
           </query>
           <earliest>-24h@h</earliest>
           <latest>now</latest>
@@ -340,6 +340,7 @@
         <option name="charting.legend.placement">right</option>
         <option name="charting.lineWidth">2</option>
         <option name="height">800</option>
+        <option name="refresh.display">progressbar</option>
         <option name="trellis.enabled">0</option>
         <option name="trellis.scales.shared">1</option>
         <option name="trellis.size">medium</option>
@@ -543,7 +544,7 @@
           <query>
 <!-- get_all_patient -->
             | eval _time=date_announced
-            | eval status=case(status=="Hospitalized","入院",status=="Discharged","退院",status=="Recovered","快復",status=="Deceased","死亡",status=="Unspecified","不明",status=="","感染",isnull(status),"感染")
+            | eval status=case(status=="Hospitalized","入院",status=="Discharged","退院",status=="Recovered","回復",status=="Deceased","死亡",status=="Unspecified","不明",status=="","感染",isnull(status),"感染")
             | eval prefecture=if(prefecture=="Port Quarantine", "港湾検疫", prefecture)
             | stats count by status, prefecture
             | lookup prefecturelist Prefecture as prefecture OUTPUT "都道府県"
@@ -593,7 +594,7 @@
             | inputlookup prefecturedata
             | sort - Cases Deaths
             | where Prefecture!="Total"
-            | fields Prefecture, Cases, Deaths, Recovered
+            | fields "Prefecture (ja)", Cases, Deaths, Recovered
           </query>
           <earliest>-24h@h</earliest>
           <latest>now</latest>
@@ -603,6 +604,7 @@
         <option name="dataOverlayMode">none</option>
         <option name="drilldown">none</option>
         <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
         <option name="rowNumbers">true</option>
         <option name="totalsRow">true</option>
         <option name="wrap">false</option>
