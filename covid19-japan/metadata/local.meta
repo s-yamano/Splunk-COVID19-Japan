@@ -266,3 +266,31 @@ version = 8.0.3
 
 [views/covid19_japan_toyo_keizai_online]
 version = 8.0.3
+
+[lookups/Cruise_Sum_By_Day.csv]
+export = none
+version = 8.0.3
+
+[lookups/Hokkaido.csv]
+export = none
+version = 8.0.3
+
+[lookups/Patient_Statuses.csv]
+export = none
+version = 8.0.3
+
+[lookups/Recovery_Stats.csv]
+export = none
+version = 8.0.3
+
+[lookups/Saitama.csv]
+export = none
+version = 8.0.3
+
+[lookups/Tokyo_Recoveries.csv]
+export = none
+version = 8.0.3
+
+[lookups/toyo_keizai_online-modtime.csv]
+export = none
+version = 8.0.3
