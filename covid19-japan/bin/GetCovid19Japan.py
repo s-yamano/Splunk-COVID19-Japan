@@ -31,23 +31,17 @@ class Base_COVID19_Japan():
             "gid": "0",
             "csvfile": "Patient_Data.csv",
             "make_DictListFunc": None,
-            "end_index": 5,
-        },
-        "Tokyo": {
-            "gid": "1167478583",
-            "csvfile": "Tokyo.csv",
-            "make_DictListFunc": None,
             "end_index": 4,
-        },
-        "Osaka": {
-            "gid": "1062145453",
-            "csvfile": "Osaka.csv",
-            "make_DictListFunc": None,
-            "end_index": 5,
         },
         "Aichi": {
             "gid": "1707816451",
             "csvfile": "Aichi.csv",
+            "make_DictListFunc": None,
+            "end_index": 4,
+        },
+        "Chiba": {
+            "gid": "818208823",
+            "csvfile": "Chiba.csv",
             "make_DictListFunc": None,
             "end_index": 4,
         },
@@ -57,9 +51,27 @@ class Base_COVID19_Japan():
             "make_DictListFunc": None,
             "end_index": 4,
         },
-        "Chiba": {
-            "gid": "",
-            "csvfile": "Chiba.csv",
+        "Osaka": {
+            "gid": "1062145453",
+            "csvfile": "Osaka.csv",
+            "make_DictListFunc": None,
+            "end_index": 4,
+        },
+        "Saitama": {
+            "gid": "2074718500",
+            "csvfile": "Saitama.csv",
+            "make_DictListFunc": None,
+            "end_index": 4,
+        },
+        "Hokkaido": {
+            "gid": "1827832686",
+            "csvfile": "Hokkaido.csv",
+            "make_DictListFunc": None,
+            "end_index": 4,
+        },
+        "Tokyo": {
+            "gid": "1167478583",
+            "csvfile": "Tokyo.csv",
             "make_DictListFunc": None,
             "end_index": 4,
         },
@@ -75,17 +87,11 @@ class Base_COVID19_Japan():
             "make_DictListFunc": None,
             "end_index": 0,
         },
-        "Last Updated": {
-            "gid": "614137682",
-            "csvfile": "Last_Updated.csv",
+        "Cruise Sum By Day": {
+            "gid": "2061808889",
+            "csvfile": "Cruise_Sum_By_Day.csv",
             "make_DictListFunc": None,
             "end_index": 0,
-        },
-        "Aggregates": {
-            "gid": "1403721638",
-            "csvfile": "Aggregates.csv",
-            "make_DictList": None,
-            "end_index": False,
         },
         "NHK": {
             "gid": "149956111",
@@ -94,14 +100,26 @@ class Base_COVID19_Japan():
             "end_index": 4,
         },
         "MHLW": {
-            "gid": "149956111",
+            "gid": "924178105",
             "csvfile": "MHLW.csv",
             "make_DictListFunc": None,
             "end_index": False,
         },
-        "Diamond Princess Sum By Day": {
-            "gid": "2061808889",
-            "csvfile": "Diamond_Princess_Sum_By_Day.csv",
+        "Tokyo Counts": {
+            "gid": "1747653987",
+            "csvfile": "Tokyo_Counts.csv",
+            "make_DictListFunc": None,
+            "end_index": 0,
+        },
+        "Tokyo Recoveries": {
+            "gid": "1316933739",
+            "csvfile": "Tokyo_Recoveries.csv",
+            "make_DictListFunc": None,
+            "end_index": 0,
+        },
+        "Recovery Stats": {
+            "gid": "1309610105",
+            "csvfile": "Recovery_Stats.csv",
             "make_DictListFunc": None,
             "end_index": 0,
         },
@@ -114,12 +132,6 @@ class Base_COVID19_Japan():
         "Patient Statuses": {
             "gid": "1043373537",
             "csvfile": "Patient_Statuses.csv",
-            "make_DictListFunc": None,
-            "end_index": 0,
-        },
-        "Tokyo Counts": {
-            "gid": "1747653987",
-            "csvfile": "Tokyo_Counts.csv",
             "make_DictListFunc": None,
             "end_index": 0,
         },
@@ -237,18 +249,22 @@ class COVID19_Japan():
     _c19j = None
     def __init__(self, sheet_name="Patient Data"):
         if sheet_name == "Patient Data" or \
-            sheet_name == "Tokyo" or \
+            sheet_name == "Aichi" or \
+            sheet_name == "Chiba" or \
+            sheet_name == "Kanagawa" or \
             sheet_name == "Osaka" or \
+            sheet_name == "Saitama" or \
+            sheet_name == "Hokkaido" or \
+            sheet_name == "Tokyo" or \
             sheet_name == "Prefecture Data" or \
             sheet_name == "Sum By Day" or \
+            sheet_name == "Cruise Sum By Day" or \
+            sheet_name == "Tokyo Counts" or \
+            sheet_name == "Tokyo Recoveries" or \
+            sheet_name == "Recovery Stats" or \
             sheet_name == "Last Updated" or \
-            sheet_name == "Diamond Princess Sum By Day" or \
             sheet_name == "Diamond Princess Patient Data" or \
-            sheet_name == "Patient Statuses" or \
-            sheet_name == "Aichi" or \
-            sheet_name == "Kanagawa" or \
-            sheet_name == "Chiba" or \
-            sheet_name == "Tokyo Counts":
+            sheet_name == "Patient Statuses":
             self._c19j = COVID19_Japan_Common(sheet_name)
         elif sheet_name == "Aggregates":
             pass

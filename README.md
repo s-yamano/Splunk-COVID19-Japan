@@ -137,6 +137,15 @@ COVID19 Japan Dashboard for Splunk
 
 今回のダッシュボード作成では全ては利用していませんが、有用なので残してあります。
 
+### 人口データ
+
+* [人口推計 010 都道府県，年齢（5歳階級），男女別人口－総人口，日本人人口 | データベース | 統計データを探す | 政府統計の総合窓口](https://www.e-stat.go.jp/stat-search/database?page=1&statdisp_id=0003412322)
+
+
+* populationJapan.csv -> populationJapan-20191001.csv
+
+いずれ使用する予定ですが、現在のところ、使用していません。
+
 
 ## 参考
 
@@ -148,6 +157,7 @@ COVID19 Japan Dashboard for Splunk
 
 |Version|Release Date|Description|
 |:--|:--|:--|
+|0.4.3	|2020/05/15	|東洋経済オンライン元データの CSV ヘッダ変更に対応。(県別テーブル)
 |0.4.1	|2020/05/12	|東洋経済オンライン元データの CSV ヘッダ変更に対応。
 |0.4.0	|2020/05/09	|東洋経済オンラインのエミュレート Dashboard を追加。
 |0.3.5	|2020/05/09	|alternative Dashboard 情報元のデータ構造の変更に対応。
