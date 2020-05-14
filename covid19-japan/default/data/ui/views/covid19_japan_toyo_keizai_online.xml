@@ -8,8 +8,6 @@
     <set token="inspection_case_sma_fields">"移動平均(7日間)"</set>
     <set token="critical_sma_fields">"移動平均(7日間)"</set>
     <set token="deceased_sma_fields">"移動平均(7日間)"</set>
-    <set token="disp_NonPCR">1</set>
-    <unset token="disp_PCR"></unset>
     <set token="target_prefecture_en">Tokyo</set>
   </init>
   <label>COVID19 Japan Toyo Keizai Online</label>
@@ -154,11 +152,11 @@
   <search id="prefectures_summary_base">
     <query>
       | inputlookup toyo_keizai_online-prefectures.csv
-      | eval _time=strptime('年' . "-" . '月' . "-" . '日', "%F")
-      | fields - "年", "月", "日"
-      | rename "患者数（2020年3月28日からは感染者数）" as "感染者", "現在は入院等" as "入院等"
+      | eval _time=strptime(year . "-" . month . "-" . date, "%F")
+      | fields - year, month, date
+      | rename prefectureNameJ as "都道府県", testedPositive as "感染者", discharged as "退院者", deaths as "死亡者", peopleTested as "PCR検査人数"
       | stats values(*) as * by _time, "都道府県"
-      | fields _time, "都道府県", "感染者", "入院等", "死亡者", "退院者"
+      | fields _time, "都道府県", "感染者", "死亡者", "退院者", "PCR検査人数", prefectureNameE
     </query>
     <refresh>1h</refresh>
   </search>
@@ -217,40 +215,9 @@
       | sort - Total
     </query>
   </search>
-  <search id="inspection_base">
+  <search base="prefectures_summary_base" id="prefectures_inspected_base">
     <query>
-      | inputlookup toyo_keizai_online-prefectures-2.csv
-      | eval _time=strptime('年' . "-" . '月' . "-" . '日', "%F")
-      | fields - "年", "月", "日"
-      | stats values(*) as * by _time, "都道府県"
-      | eval shortname='都道府県'
-      | join type=outer shortname 
-          [
-            | inputlookup prefecturelist
-            | rename "都道府県略称" as shortname
-            | fields shortname, "都道府県"
-          ]
-      | fields - shortname
-      | fields _time, "都道府県", "PCR検査人数", "PCR検査陽性者数", "検査人数の集計期間に対応する陽性者数", "陽性率"
-    </query>
-    <refresh>1h</refresh>
-  </search>
-  <search>
-    <query>
-      | inputlookup toyo_keizai_online-modtime.csv
-      | search filename="toyo_keizai_online-prefectures-2.csv"
-      | tail 1
-      | eval modtime=strftime(strptime(modtime,"%FT%T%z"),"%Y/%m/%d %T")
-      | fields modtime
-    </query>
-    <refresh>1h</refresh>
-    <done>
-      <set token="prefectures2_time">$result.modtime$</set>
-    </done>
-  </search>
-  <search base="inspection_base" id="prefectures_inspected_base">
-    <query>
-<!-- inspection_base -->
+<!-- prefectures_summary_base -->
       | timechart limit=0 values("PCR検査人数") as "PCR検査人数" by "都道府県"
       | fields - _span, _spandays
       | appendpipe 
@@ -1157,16 +1124,6 @@
         <choice value="PCR検査人数">PCR検査人数</choice>
         <default>感染者</default>
         <initialValue>感染者</initialValue>
-        <change>
-          <condition value="PCR検査人数">
-            <unset token="disp_NonPCR"></unset>
-            <set token="disp_PCR">1</set>
-          </condition>
-          <condition>
-            <set token="disp_NonPCR">1</set>
-            <unset token="disp_PCR"></unset>
-          </condition>
-        </change>
       </input>
     </panel>
     <panel>
@@ -1191,7 +1148,7 @@
     </panel>
   </row>
   <row>
-    <panel depends="$disp_NonPCR$">
+    <panel>
       <map>
         <search base="prefecture_status">
           <query>
@@ -1282,100 +1239,6 @@
         <drilldown>
           <set token="form.target_prefecture">$click.value$</set>
           <set token="target_prefecture">$click.value$</set>
-        </drilldown>
-      </chart>
-    </panel>
-    <panel depends="$disp_PCR$">
-      <map>
-        <search base="prefecture_PCR_status">
-          <query>
-<!-- prefecture_PCR_status -->
-            | lookup prefecturelist "都道府県" OUTPUT Prefecture
-            | fields - "都道府県"
-            | eval count=log('PCR検査人数')
-            | fields Prefecture, count
-            | geom nipponmap featureIdField=Prefecture
-          </query>
-        </search>
-        <option name="drilldown">all</option>
-        <option name="mapping.choroplethLayer.colorBins">9</option>
-        <option name="mapping.choroplethLayer.colorMode">auto</option>
-        <option name="mapping.choroplethLayer.maximumColor">0xff0000</option>
-        <option name="mapping.choroplethLayer.minimumColor">0x62b3b2</option>
-        <option name="mapping.choroplethLayer.neutralPoint">0</option>
-        <option name="mapping.choroplethLayer.shapeOpacity">0.75</option>
-        <option name="mapping.choroplethLayer.showBorder">1</option>
-        <option name="mapping.data.maxClusters">100</option>
-        <option name="mapping.legend.placement">none</option>
-        <option name="mapping.map.center">(38.24,136.43)</option>
-        <option name="mapping.map.panning">1</option>
-        <option name="mapping.map.scrollZoom">0</option>
-        <option name="mapping.map.zoom">5</option>
-        <option name="mapping.markerLayer.markerMaxSize">50</option>
-        <option name="mapping.markerLayer.markerMinSize">10</option>
-        <option name="mapping.markerLayer.markerOpacity">0.8</option>
-        <option name="mapping.showTiles">1</option>
-        <option name="mapping.tileLayer.attribution">マップ出典: "NipponMap" for Japanese Map</option>
-        <option name="mapping.tileLayer.maxZoom">7</option>
-        <option name="mapping.tileLayer.minZoom">0</option>
-        <option name="mapping.tileLayer.tileOpacity">1</option>
-        <option name="mapping.type">choropleth</option>
-        <option name="trellis.enabled">0</option>
-        <option name="trellis.scales.shared">1</option>
-        <option name="trellis.size">medium</option>
-        <drilldown>
-          <set token="target_prefecture_en">$click.value$</set>
-        </drilldown>
-      </map>
-      <chart>
-        <title>$target_status$ (更新(取得)日時: $prefectures2_time$)</title>
-        <search base="inspection_base" id="prefecture_PCR_status">
-          <query>
-<!-- inspection_base -->
-            | timechart limit=0 values("PCR検査人数") as "PCR検査人数" by "都道府県"
-            | fields - _span, _spandays
-            | tail 1
-            | fields - _time
-            | transpose 0 column_name="都道府県"
-            | rename "row 1" as "PCR検査人数"
-            | sort - "PCR検査人数"
-          </query>
-        </search>
-        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
-        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
-        <option name="charting.axisTitleX.visibility">collapsed</option>
-        <option name="charting.axisTitleY.visibility">collapsed</option>
-        <option name="charting.axisTitleY2.visibility">visible</option>
-        <option name="charting.axisX.abbreviation">none</option>
-        <option name="charting.axisX.scale">linear</option>
-        <option name="charting.axisY.abbreviation">none</option>
-        <option name="charting.axisY.scale">linear</option>
-        <option name="charting.axisY2.abbreviation">none</option>
-        <option name="charting.axisY2.enabled">0</option>
-        <option name="charting.axisY2.scale">inherit</option>
-        <option name="charting.chart">bar</option>
-        <option name="charting.chart.bubbleMaximumSize">50</option>
-        <option name="charting.chart.bubbleMinimumSize">10</option>
-        <option name="charting.chart.bubbleSizeBy">area</option>
-        <option name="charting.chart.nullValueMode">gaps</option>
-        <option name="charting.chart.showDataLabels">none</option>
-        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
-        <option name="charting.chart.stackMode">default</option>
-        <option name="charting.chart.style">shiny</option>
-        <option name="charting.drilldown">all</option>
-        <option name="charting.layout.splitSeries">0</option>
-        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
-        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
-        <option name="charting.legend.mode">standard</option>
-        <option name="charting.legend.placement">none</option>
-        <option name="charting.lineWidth">2</option>
-        <option name="height">800</option>
-        <option name="trellis.enabled">0</option>
-        <option name="trellis.scales.shared">1</option>
-        <option name="trellis.size">medium</option>
-        <drilldown>
-          <set token="target_prefecture">$click.value$</set>
-          <set token="form.target_prefecture">$click.value$</set>
         </drilldown>
       </chart>
     </panel>
@@ -1614,10 +1477,10 @@
         <option name="trellis.size">medium</option>
       </chart>
       <single>
-        <title>$target_prefecture$ のPCR検査人数 (更新(取得)日時: $prefectures2_time$)</title>
-        <search base="inspection_base">
+        <title>$target_prefecture$ のPCR検査人数 (更新(取得)日時: $prefectures_time$)</title>
+        <search base="prefectures_summary_base">
           <query>
-<!-- inspection_base -->
+<!-- prefectures_summary_base -->
             | search "都道府県"="$target_prefecture$"
             | fields - "都道府県"
             | timechart values(*) as *
