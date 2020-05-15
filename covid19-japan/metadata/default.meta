@@ -33,3 +33,303 @@ export = system
 [viewstates]
 access = read : [ * ], write : [ * ]
 export = system
+
+########################################
+#	app local
+########################################
+[app/launcher]
+version = 8.0.3
+
+[app/ui]
+version = 8.0.3
+
+[indexes/covid19japan]
+version = 8.0.3
+
+[indexes/covid19japan_nhk]
+version = 8.0.3
+
+[inputs/monitor%3A%2F%2F%2Fvar%2Flocal%2FCOVID19%2FJapan%2FNHK-47newpatients-data.json]
+export = none
+version = 8.0.3
+
+[inputs/monitor%3A%2F%2F%2Fvar%2Flocal%2FCOVID19%2FJapan%2FNHK-47patients-data.json]
+export = none
+version = 8.0.3
+
+[inputs/monitor%3A%2F%2F%2Fvar%2Flocal%2FCOVID19%2FJapan%2Fjapan_covid_19_coronavirus_tracker-Aichi.csv]
+export = none
+version = 8.0.3
+
+[inputs/monitor%3A%2F%2F%2Fvar%2Flocal%2FCOVID19%2FJapan%2Fjapan_covid_19_coronavirus_tracker-Chiba.csv]
+export = none
+version = 8.0.3
+
+[inputs/monitor%3A%2F%2F%2Fvar%2Flocal%2FCOVID19%2FJapan%2Fjapan_covid_19_coronavirus_tracker-Kanagawa.csv]
+export = none
+version = 8.0.3
+
+[inputs/monitor%3A%2F%2F%2Fvar%2Flocal%2FCOVID19%2FJapan%2Fjapan_covid_19_coronavirus_tracker-Osaka.csv]
+export = none
+version = 8.0.3
+
+[inputs/monitor%3A%2F%2F%2Fvar%2Flocal%2FCOVID19%2FJapan%2Fjapan_covid_19_coronavirus_tracker-Patient_Data.csv]
+export = none
+version = 8.0.3
+
+[inputs/monitor%3A%2F%2F%2Fvar%2Flocal%2FCOVID19%2FJapan%2Fjapan_covid_19_coronavirus_tracker-Tokyo.csv]
+export = none
+version = 8.0.3
+
+[inputs/monitor%3A%2F%2F%2Fvar%2Flocal%2FCOVID19%2FJapan%2Fjapan_covid_19_coronavirus_tracker-patient_data_latest.json]
+version = 8.0.3
+
+[inputs/monitor%3A%2F%2F%2Fvar%2Flocal%2FCOVID19%2FJapan%2Fjapan_covid_19_coronavirus_tracker-summary_latest.json]
+version = 8.0.3
+
+[inputs/monitor%3A%2F%2F%2Fvar%2Flocal%2FCOVID19%2FJapan%2Fjapan_covid_19_coronavirus_tracker-tokyo_counts.json]
+version = 8.0.3
+
+[inputs/script%3A%2F%2F%24SPLUNK_HOME%2Fetc%2Fapps%2Fcovid19-japan%2Fbin%2FupdateCovid19JapanCSV.sh]
+export = none
+version = 8.0.3
+
+[inputs/script%3A%2F%2F%24SPLUNK_HOME%2Fetc%2Fapps%2Fcovid19-japan%2Fbin%2FupdateCovid19Japan_JSON.sh]
+export = none
+version = 8.0.3
+
+[inputs/script%3A%2F%2F%24SPLUNK_HOME%2Fetc%2Fapps%2Fcovid19-japan%2Fbin%2FupdateCovid19Japan_NHK_JSON.sh]
+export = none
+version = 8.0.3
+
+[inputs/script%3A%2F%2F%24SPLUNK_HOME%2Fetc%2Fapps%2Fcovid19-japan%2Fbin%2FupdateCovid19Japan_ToyoKeizaiOnline_CSV.sh]
+version = 8.0.3
+
+[lookups/Aichi.csv]
+export = none
+version = 8.0.3
+
+[lookups/Chiba.csv]
+export = none
+version = 8.0.3
+
+[lookups/Diamond_Princess_Patient_Data.csv]
+export = none
+version = 8.0.3
+
+[lookups/Diamond_Princess_Sum_By_Day.csv]
+export = none
+version = 8.0.3
+
+[lookups/Kanagawa.csv]
+export = none
+version = 8.0.3
+
+[lookups/NipponMap.kml]
+export = system
+version = 8.0.3
+
+[lookups/Osaka.csv]
+export = none
+version = 8.0.3
+
+[lookups/Patient_Data.csv]
+export = none
+version = 8.0.3
+
+[lookups/Prefecture_Data.csv]
+export = none
+version = 8.0.3
+
+[lookups/PrefecturesList.csv]
+export = system
+version = 8.0.3
+
+[lookups/Sum_By_Day.csv]
+export = none
+version = 8.0.3
+
+[lookups/Tokyo.csv]
+export = none
+version = 8.0.3
+
+[lookups/Tokyo_Counts.csv]
+export = none
+version = 8.0.3
+
+[lookups/covid19japan_confirmed_by_prefecture_summary.csv]
+export = none
+version = 8.0.3
+
+[lookups/covid19japan_daily_summary.csv]
+export = none
+version = 8.0.3
+
+[lookups/covid19japan_deceased_by_prefecture_summary.csv]
+export = none
+version = 8.0.3
+
+[lookups/covid19japan_events.csv]
+export = none
+version = 8.0.3
+
+[lookups/covid19japan_nhk_47newpatients_data.csv]
+export = none
+version = 8.0.3
+
+[lookups/covid19japan_nhk_47patients_data.csv]
+export = none
+version = 8.0.3
+
+[lookups/covid19japan_summary.csv]
+export = none
+version = 8.0.3
+
+[lookups/latlongJapan.csv]
+export = system
+version = 8.0.3
+
+[lookups/toyo_keizai_online-demography.csv]
+export = none
+version = 8.0.3
+
+[lookups/toyo_keizai_online-prefectures-2.csv]
+export = none
+version = 8.0.3
+
+[lookups/toyo_keizai_online-prefectures.csv]
+export = none
+version = 8.0.3
+
+[lookups/toyo_keizai_online-summary.csv]
+export = none
+version = 8.0.3
+
+[nav/default]
+version = 8.0.3
+
+[props/covid19japan_csv]
+version = 8.0.3
+
+[props/covid19japan_json]
+version = 8.0.3
+
+[props/covid19japan_nhk_json]
+version = 8.0.3
+
+[props/covid19japan_summary_json]
+version = 8.0.3
+
+[savedsearches/gen_covid19japan_confirmed_by_prefecture_summary_csv]
+version = 8.0.3
+
+[savedsearches/gen_covid19japan_daily_summary_csv]
+version = 8.0.3
+
+[savedsearches/gen_covid19japan_deceased_by_prefecture_summary_csv]
+version = 8.0.3
+
+[savedsearches/gen_covid19japan_nhk_47newpatients_data_csv]
+version = 8.0.3
+
+[savedsearches/gen_covid19japan_nhk_47patients_data_csv]
+version = 8.0.3
+
+[transforms/aichidata]
+export = none
+version = 8.0.3
+
+[transforms/capitaljapan]
+export = system
+version = 8.0.3
+
+[transforms/chibadata]
+export = none
+version = 8.0.3
+
+[transforms/kanagawadata]
+export = none
+version = 8.0.3
+
+[transforms/latlongjapan]
+export = system
+version = 8.0.3
+
+[transforms/nipponmap]
+export = system
+version = 8.0.3
+
+[transforms/osakadata]
+export = none
+version = 8.0.3
+
+[transforms/patientdata]
+export = none
+version = 8.0.3
+
+[transforms/prefecturedata]
+export = none
+version = 8.0.3
+
+[transforms/prefecturelist]
+export = system
+version = 8.0.3
+
+[transforms/prefectureslist]
+export = system
+version = 8.0.3
+
+[transforms/tokyodata]
+export = none
+version = 8.0.3
+
+[views/covid19_japan]
+export = none
+version = 8.0.3
+
+[views/covid19_japan_alternate]
+export = none
+version = 8.0.3
+
+[views/covid19_japan_analysis]
+export = none
+version = 8.0.3
+
+[views/covid19_japan_nhk]
+export = none
+version = 8.0.3
+
+[views/covid19_japan_specific_prefecture]
+export = none
+version = 8.0.3
+
+[views/covid19_japan_toyo_keizai_online]
+version = 8.0.3
+
+[lookups/Cruise_Sum_By_Day.csv]
+export = none
+version = 8.0.3
+
+[lookups/Hokkaido.csv]
+export = none
+version = 8.0.3
+
+[lookups/Patient_Statuses.csv]
+export = none
+version = 8.0.3
+
+[lookups/Recovery_Stats.csv]
+export = none
+version = 8.0.3
+
+[lookups/Saitama.csv]
+export = none
+version = 8.0.3
+
+[lookups/Tokyo_Recoveries.csv]
+export = none
+version = 8.0.3
+
+[lookups/toyo_keizai_online-modtime.csv]
+export = none
+version = 8.0.3
