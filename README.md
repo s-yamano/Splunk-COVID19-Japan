@@ -20,6 +20,8 @@ COVID19 Japan Dashboard for Splunk
 
 ### I. (必須-選択) .spl ファイルによるインストール
 
+* [Release](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/latest) から最新版を取得します。
+
 * Web UI からのインストール
 	1. ログインします。
 	2. 「App の管理]-[ファイルから App をインストール]  
@@ -157,12 +159,12 @@ COVID19 Japan Dashboard for Splunk
 
 |Version|Release Date|Description|
 |:--|:--|:--|
-|0.4.3	|2020/05/15	|東洋経済オンライン元データの CSV ヘッダ変更に対応。(県別テーブル)
-|0.4.1	|2020/05/12	|東洋経済オンライン元データの CSV ヘッダ変更に対応。
+|[0.4.3](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.4.3)	|2020/05/15	|東洋経済オンライン元データの CSV ヘッダ変更に対応。(県別テーブル)
+|[0.4.1](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.4.1)	|2020/05/12	|東洋経済オンライン元データの CSV ヘッダ変更に対応。
 |0.4.0	|2020/05/09	|東洋経済オンラインのエミュレート Dashboard を追加。
 |0.3.5	|2020/05/09	|alternative Dashboard 情報元のデータ構造の変更に対応。
-|0.3.4	|2020/05/08	|annotation を追加。対数軸等の修正を追加。
-|0.3.3	|2020/05/05	|データ取得スクリプトで flock がない場合には lockf を使用するように修正
-|0.3.2	|2020/05/05	|昨日公表分の日付表示不具合を修正
-|0.3.1	|2020/05/04	|Saved Search による結果が 0 の場合に lookup テーブルのサイズが 0 になる不具合を修正
-|0.3.0	|2020/05/03	|Initial Release
+|[0.3.4](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.3.4)	|2020/05/08	|annotation を追加。対数軸等の修正を追加。
+|[0.3.3](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.3.3)	|2020/05/05	|データ取得スクリプトで flock がない場合には lockf を使用するように修正
+|[0.3.2](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.3.2)	|2020/05/05	|昨日公表分の日付表示不具合を修正
+|[0.3.1](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.3.1)	|2020/05/04	|Saved Search による結果が 0 の場合に lookup テーブルのサイズが 0 になる不具合を修正
+|[0.3.0](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.3.0)	|2020/05/03	|Initial Release
