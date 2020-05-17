@@ -14,6 +14,7 @@
     <set token="predict_query_postfix">"</set>
     <set token="map.lat.value">NONE</set>
     <set token="map.lon.value">NONE</set>
+    <set token="target_prefecture_en">Tokyo</set>
   </init>
   <search id="annotation_base">
     <query>
@@ -22,6 +23,19 @@
       | fields _time, annotation_label, annotation_category, annotation_color
     </query>
     <refresh>30m</refresh>
+  </search>
+  <search>
+    <!-- 英語県名を日本語県名に変換 -->
+    <query>
+      | inputlookup prefecturelist where Prefecture="$target_prefecture_en$"
+      | rename "都道府県" as pref_ja
+      | fields pref_ja
+     </query>
+    <refresh>1h</refresh>
+    <done>
+      <set token="form.target_prefecture">$result.pref_ja$</set>
+      <set token="target_prefecture">$result.pref_ja$</set>
+    </done>
   </search>
   <fieldset submitButton="false" autoRun="true"></fieldset>
   <row>
@@ -155,7 +169,7 @@
     <panel depends="$debug$">
       <title>日別患者数 (デバッグ用)</title>
       <table>
-        <search base="prefectures_all_base" id="daily_cofirmed_base">
+        <search base="prefectures_all_base" id="daily_confirmed_base">
           <query>
 <!-- prefectures_all_base -->
             | eval local_earliest=if("$time_earliest$"=="0",0,relative_time(now(),"$time_earliest$"))
@@ -506,6 +520,229 @@
     </panel>
   </row>
   <row>
+    <panel>
+      <title>日別感染者数 (昨日分まで)</title>
+      <input type="dropdown" token="time_earliest" searchWhenChanged="true">
+        <label>表示開始日</label>
+        <initialValue>-14d@d</initialValue>
+        <choice value="0">全期間</choice>
+        <choice value="-7d@d">過去1週間</choice>
+        <choice value="-14d@d">過去2週間</choice>
+        <choice value="-30d@d">過去30日</choice>
+        <choice value="-2mon@d">過去2か月</choice>
+        <choice value="-3mon@d">過去3か月</choice>
+        <choice value="-6mon@mon">過去6か月</choice>
+        <choice value="-12mon@mon">過去1年</choice>
+        <default>-14d@d</default>
+      </input>
+      <input type="radio" token="predict_flag" searchWhenChanged="true">
+        <label>予測表示</label>
+        <choice value="1">表示</choice>
+        <choice value="0">非表示</choice>
+        <default>0</default>
+        <initialValue>0</initialValue>
+        <change>
+          <condition value="1">
+            <set token="use_predict">1</set>
+            <set token="predict_query_prefix">predict future_timespan=14 algorithm=LLT</set>
+            <set token="predict_query_postfix"></set>
+          </condition>
+          <condition value="0">
+            <unset token="use_predict"></unset>
+            <set token="predict_query_prefix">eval _dummy="</set>
+            <set token="predict_query_postfix">"</set>
+          </condition>
+        </change>
+      </input>
+      <input type="multiselect" token="target_prefs" searchWhenChanged="true" depends="$use_predict$">
+        <label>予測対象</label>
+        <default>東京都</default>
+        <initialValue>東京都</initialValue>
+        <delimiter>,</delimiter>
+        <fieldForLabel>name_ja</fieldForLabel>
+        <fieldForValue>name_ja</fieldForValue>
+        <search base="prefectures_all_base">
+          <query>
+            | eval local_earliest=if("$time_earliest$"=="0",0,relative_time(strptime("$last_date$", "%Y/%m/%d %H:%M"),"$time_earliest$"))
+            | where _time&gt;=local_earliest AND _time&lt;strptime("$last_date$", "%Y/%m/%d %H:%M")
+            | stats values(confirmed) as confirmed by name_ja
+            | sort 0 - confirmed
+            | fields name_ja
+          </query>
+        </search>
+      </input>
+      <chart>
+        <title>縦軸は線形軸</title>
+        <search base="daily_confirmed_base">
+          <query>
+<!-- prefectures_all_base -->
+<!-- daily_confirmed_base -->
+            | $predict_query_prefix$ $target_prefs$ $predict_query_postfix$
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.text">公表日付</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">400</option>
+        <option name="refresh.display">preview</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+      <chart>
+        <title>縦軸は対数軸</title>
+        <search base="daily_confirmed_base">
+          <query>
+<!-- prefectures_all_base -->
+<!-- daily_confirmed_base -->
+            | addtotals fieldname="合計"
+            | $predict_query_prefix$ $target_prefs$ $predict_query_postfix$
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.minimumNumber">0</option>
+        <option name="charting.axisY.scale">log</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">1</option>
+        <option name="charting.axisY2.minimumNumber">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.overlayFields">合計</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">400</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>10万人当たりの7日間合計感染者数 ($last_date$ 現在)</title>
+      <chart>
+        <title>単位は「人」</title>
+        <search base="prefectures_all_base">
+          <query>
+<!-- prefectures_all_base -->
+            |  join _time, name
+              [
+                | inputlookup covid19japan_deceased_by_prefecture_summary.csv
+                | fields _time, name, name_ja, daily_deceased
+              ]
+            | fields _time, name, name_ja, daily_confirmed, daily_deceased
+            | eval local_earliest=relative_time(strptime("$last_date$", "%Y/%m/%d %H:%M"),"-7d@d")
+            | where _time&gt;=local_earliest AND _time&lt;relative_time(strptime("$last_date$", "%Y/%m/%d %H:%M"),"+0d@d")
+            | fields - _time, local_earliest
+            | eventstats sum(daily_confirmed) as sum_7days_confirmed, sum(daily_deceased) as sum_7days_deceased by name_ja
+            | fields - daily_confirmed, daily_deceased
+            | dedup name, name_ja, sum_7days_confirmed, sum_7days_deceased
+            | join name_ja
+              [
+                | inputlookup populationJapan.csv
+                | where '人口'=="総人口"
+                | rename "全国・都道府県" as name_ja
+                | fields name_ja, "総数"
+              ]
+            | eval "10万人当たりの7日間合計感染者数"=round(sum_7days_confirmed/('総数'/100),3)
+            | fields name_ja, "10万人当たりの7日間合計感染者数"
+            | sort - "10万人当たりの7日間合計感染者数"
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">980</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <drilldown>
+          <link target="_blank">/app/covid19-japan/covid19_japan_specific_prefecture?form.target_prefecture=$form.target_prefecture$</link>
+        </drilldown>
+      </chart>
+    </panel>
+  </row>
+  <row>
     <panel depends="last_date">
       <title>県別感染者数マップ ($last_date$ 現在)</title>
       <map>
@@ -699,11 +936,6 @@
     <panel>
       <chart>
         <title>縦軸は対数軸</title>
-        <search type="annotation" base="annotation_base">
-          <query>
-<!-- annotation_base -->
-          </query>
-        </search>
         <search base="prefectures_all_base">
           <query>
 <!-- prefectures_all_base -->
@@ -721,6 +953,11 @@
             | sort 0 - Current
             | fields - Current
             | transpose 0 header_field=column column_name=_time
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
           </query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
@@ -742,168 +979,6 @@
         <option name="charting.chart.bubbleMinimumSize">10</option>
         <option name="charting.chart.bubbleSizeBy">area</option>
         <option name="charting.chart.nullValueMode">connect</option>
-        <option name="charting.chart.showDataLabels">none</option>
-        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
-        <option name="charting.chart.stackMode">default</option>
-        <option name="charting.chart.style">shiny</option>
-        <option name="charting.drilldown">none</option>
-        <option name="charting.layout.splitSeries">0</option>
-        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
-        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
-        <option name="charting.legend.mode">standard</option>
-        <option name="charting.legend.placement">right</option>
-        <option name="charting.lineWidth">2</option>
-        <option name="height">400</option>
-        <option name="trellis.enabled">0</option>
-        <option name="trellis.scales.shared">1</option>
-        <option name="trellis.size">medium</option>
-      </chart>
-    </panel>
-  </row>
-  <row>
-    <panel>
-      <title>日別感染者数 (昨日分まで)</title>
-      <input type="dropdown" token="time_earliest" searchWhenChanged="true">
-        <label>表示開始日</label>
-        <initialValue>-14d@d</initialValue>
-        <choice value="0">全期間</choice>
-        <choice value="-7d@d">過去1週間</choice>
-        <choice value="-14d@d">過去2週間</choice>
-        <choice value="-30d@d">過去30日</choice>
-        <choice value="-2mon@d">過去2か月</choice>
-        <choice value="-3mon@d">過去3か月</choice>
-        <choice value="-6mon@mon">過去6か月</choice>
-        <choice value="-12mon@mon">過去1年</choice>
-        <default>-14d@d</default>
-      </input>
-      <input type="radio" token="predict_flag" searchWhenChanged="true">
-        <label>予測表示</label>
-        <choice value="1">表示</choice>
-        <choice value="0">非表示</choice>
-        <default>0</default>
-        <initialValue>0</initialValue>
-        <change>
-          <condition value="1">
-            <set token="use_predict">1</set>
-            <set token="predict_query_prefix">predict future_timespan=14 algorithm=LLT</set>
-            <set token="predict_query_postfix"></set>
-          </condition>
-          <condition value="0">
-            <unset token="use_predict"></unset>
-            <set token="predict_query_prefix">eval _dummy="</set>
-            <set token="predict_query_postfix">"</set>
-          </condition>
-        </change>
-      </input>
-      <input type="multiselect" token="target_prefs" searchWhenChanged="true" depends="$use_predict$">
-        <label>予測対象</label>
-        <default>東京都</default>
-        <initialValue>東京都</initialValue>
-        <delimiter>,</delimiter>
-        <fieldForLabel>name_ja</fieldForLabel>
-        <fieldForValue>name_ja</fieldForValue>
-        <search base="prefectures_all_base">
-          <query>
-<!-- prefectures_all_base -->
-            | eval local_earliest=if("$time_earliest$"=="0",0,relative_time(now(),"$time_earliest$"))
-            | where _time&gt;=local_earliest AND _time&lt;relative_time(now(),"-0d@d")
-            | stats values(confirmed) as confirmed by name_ja
-            | sort 0 - confirmed
-            | fields name_ja
-          </query>
-        </search>
-      </input>
-    </panel>
-  </row>
-  <row>
-    <panel>
-      <chart>
-        <title>縦軸は線形軸</title>
-        <search type="annotation" base="annotation_base">
-          <query>
-<!-- annotation_base -->
-          </query>
-        </search>
-        <search base="daily_cofirmed_base">
-          <query>
-<!-- prefectures_all_base -->
-<!-- daily_cofirmed_base -->
-            | $predict_query_prefix$ $target_prefs$ $predict_query_postfix$
-          </query>
-        </search>
-        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
-        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
-        <option name="charting.axisTitleX.text">公表日付</option>
-        <option name="charting.axisTitleX.visibility">collapsed</option>
-        <option name="charting.axisTitleY.visibility">visible</option>
-        <option name="charting.axisTitleY2.visibility">visible</option>
-        <option name="charting.axisX.abbreviation">none</option>
-        <option name="charting.axisX.scale">linear</option>
-        <option name="charting.axisY.abbreviation">none</option>
-        <option name="charting.axisY.minimumNumber">0</option>
-        <option name="charting.axisY.scale">linear</option>
-        <option name="charting.axisY2.abbreviation">none</option>
-        <option name="charting.axisY2.enabled">0</option>
-        <option name="charting.axisY2.scale">inherit</option>
-        <option name="charting.chart">area</option>
-        <option name="charting.chart.bubbleMaximumSize">50</option>
-        <option name="charting.chart.bubbleMinimumSize">10</option>
-        <option name="charting.chart.bubbleSizeBy">area</option>
-        <option name="charting.chart.nullValueMode">connect</option>
-        <option name="charting.chart.showDataLabels">none</option>
-        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
-        <option name="charting.chart.stackMode">stacked</option>
-        <option name="charting.chart.style">shiny</option>
-        <option name="charting.drilldown">none</option>
-        <option name="charting.layout.splitSeries">0</option>
-        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
-        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
-        <option name="charting.legend.mode">standard</option>
-        <option name="charting.legend.placement">right</option>
-        <option name="charting.lineWidth">2</option>
-        <option name="height">400</option>
-        <option name="refresh.display">preview</option>
-        <option name="trellis.enabled">0</option>
-        <option name="trellis.scales.shared">1</option>
-        <option name="trellis.size">medium</option>
-      </chart>
-    </panel>
-    <panel>
-      <chart>
-        <title>縦軸は対数軸</title>
-        <search type="annotation" base="annotation_base">
-          <query>
-<!-- annotation_base -->
-          </query>
-        </search>
-        <search base="daily_cofirmed_base">
-          <query>
-<!-- prefectures_all_base -->
-<!-- daily_cofirmed_base -->
-            | addtotals fieldname="合計"
-            | $predict_query_prefix$ $target_prefs$ $predict_query_postfix$
-          </query>
-        </search>
-        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
-        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
-        <option name="charting.axisTitleX.visibility">collapsed</option>
-        <option name="charting.axisTitleY.visibility">visible</option>
-        <option name="charting.axisTitleY2.visibility">visible</option>
-        <option name="charting.axisX.abbreviation">none</option>
-        <option name="charting.axisX.scale">linear</option>
-        <option name="charting.axisY.abbreviation">none</option>
-        <option name="charting.axisY.minimumNumber">0</option>
-        <option name="charting.axisY.scale">log</option>
-        <option name="charting.axisY2.abbreviation">none</option>
-        <option name="charting.axisY2.enabled">1</option>
-        <option name="charting.axisY2.minimumNumber">0</option>
-        <option name="charting.axisY2.scale">inherit</option>
-        <option name="charting.chart">column</option>
-        <option name="charting.chart.bubbleMaximumSize">50</option>
-        <option name="charting.chart.bubbleMinimumSize">10</option>
-        <option name="charting.chart.bubbleSizeBy">area</option>
-        <option name="charting.chart.nullValueMode">gaps</option>
-        <option name="charting.chart.overlayFields">合計</option>
         <option name="charting.chart.showDataLabels">none</option>
         <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
         <option name="charting.chart.stackMode">default</option>
