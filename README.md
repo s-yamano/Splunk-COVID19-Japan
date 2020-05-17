@@ -2,7 +2,7 @@
 
 COVID19 Japan Dashboard for Splunk
 
-[Coronavirus Disease (COVID-19) Japan Tracker](https://covid19japan.com/) と [特設サイト 新型コロナウイルス 都道府県別の感染者数・感染者マップ｜NHK](https://www3.nhk.or.jp/news/special/coronavirus/data/) のデータを利用して Splunk のダッシュボードを作成しています。
+"[Coronavirus Disease (COVID-19) Japan Tracker](https://covid19japan.com/)"、「[特設サイト 新型コロナウイルス 都道府県別の感染者数・感染者マップ｜NHK](https://www3.nhk.or.jp/news/special/coronavirus/data/)」、「[新型コロナウイルス 国内感染の状況 - 東洋経済オンライン](https://toyokeizai.net/sp/visual/tko/covid19/)」のデータを利用して Splunk のダッシュボードを作成しています。
 
 
 
@@ -20,7 +20,7 @@ COVID19 Japan Dashboard for Splunk
 
 ### I. (必須-選択) .spl ファイルによるインストール
 
-* [Release](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/latest) から最新版を取得します。
+* [Release](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/latest) から covid19-japan.spl の最新版を取得します。
 
 * Web UI からのインストール
 	1. ログインします。
@@ -144,9 +144,8 @@ COVID19 Japan Dashboard for Splunk
 * [人口推計 010 都道府県，年齢（5歳階級），男女別人口－総人口，日本人人口 | データベース | 統計データを探す | 政府統計の総合窓口](https://www.e-stat.go.jp/stat-search/database?page=1&statdisp_id=0003412322)
 
 
-* populationJapan.csv -> populationJapan-20191001.csv
-
-いずれ使用する予定ですが、現在のところ、使用していません。
+* populationJapan.csv -> populationJapan-20191001.csv  
+	「10万人当たりの7日間合計感染者数」に使用。
 
 
 ## 参考
@@ -159,6 +158,7 @@ COVID19 Japan Dashboard for Splunk
 
 |Version|Release Date|Description|
 |:--|:--|:--|
+|[0.4.4](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.4.4)	|2020/05/17	|"COVID19 Japan" ダッシュボードに「10万人当たりの7日間合計感染者数」を追加。
 |[0.4.3](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.4.3)	|2020/05/15	|東洋経済オンライン元データの CSV ヘッダ変更に対応。(県別テーブル)
 |[0.4.1](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.4.1)	|2020/05/12	|東洋経済オンライン元データの CSV ヘッダ変更に対応。
 |0.4.0	|2020/05/09	|東洋経済オンラインのエミュレート Dashboard を追加。
