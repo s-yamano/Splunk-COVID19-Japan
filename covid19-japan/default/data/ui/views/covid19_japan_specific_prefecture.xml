@@ -1,7 +1,7 @@
 <form theme="dark">
   <label>COVID19 Japan (specific prefecture)</label>
   <init>
-    <set token="last_date">-</set>
+    <set token="prefectures_last_date">-</set>
     <unset token="first_date"></unset>
     <unset token="debug">true</unset>
     <set token="predict_flag">0</set>
@@ -123,7 +123,7 @@
   <row>
     <panel>
       <html>
-        <h1>COVID19 Japan $target_prefecture_ja$ 状況 ($last_date$ 現在)</h1>
+        <h1>COVID19 Japan $target_prefecture_ja$ 状況 ($prefectures_last_date$ 現在)</h1>
       </html>
     </panel>
   </row>
@@ -180,7 +180,7 @@
       </single>
     </panel>
     <panel depends="$debug$">
-      <title>最古日時 (tatejikuha デバッグ用)</title>
+      <title>最古日時 (デバッグ用)</title>
       <single>
         <search id="get_first_date" base="summary_all_base">
           <query>
@@ -268,7 +268,7 @@
     <panel depends="$debug$">
       <title>県別更新日時 (デバッグ用)</title>
       <single>
-        <search id="get_last_date" base="prefectures_all_base">
+        <search id="get_prefectures_last_date" base="prefectures_all_base">
           <query>
 <!-- summary_all_base -->
             | eval upd=strptime(updated, "%FT%T%z")
@@ -277,10 +277,10 @@
             | fields max_date
           </query>
           <progress>
-            <set token="last_date">-</set>
+            <set token="prefectures_last_date">-</set>
           </progress>
           <done>
-            <set token="last_date">$result.max_date$</set>
+            <set token="prefectures_last_date">$result.max_date$</set>
           </done>
         </search>
         <option name="drilldown">none</option>
@@ -288,7 +288,7 @@
     </panel>
   </row>
   <row>
-    <panel depends="$last_date$">
+    <panel>
       <title>感染者数累積</title>
       <single>
         <search base="prefecture_summary">
@@ -308,7 +308,7 @@
         <option name="useColors">1</option>
       </single>
     </panel>
-    <panel depends="$last_date$">
+    <panel>
       <title>感染者数 ( 累積 - ( 回復 + 死亡 ) )</title>
       <single>
         <search base="prefecture_summary">
@@ -330,7 +330,7 @@
         <option name="useColors">1</option>
       </single>
     </panel>
-    <panel depends="$last_date$">
+    <panel>
       <title>死亡者数</title>
       <single>
         <search base="prefecture_summary">
@@ -360,7 +360,7 @@
         <option name="useThousandSeparators">1</option>
       </single>
     </panel>
-    <panel depends="$debug$, $last_date$">
+    <panel depends="$debug$">
       <title>重傷者数</title>
       <single>
         <search>
@@ -389,7 +389,7 @@
         <option name="useThousandSeparators">1</option>
       </single>
     </panel>
-    <panel depends="$last_date$">
+    <panel>
       <title>回復者数</title>
       <single>
         <search base="prefecture_summary">
@@ -612,7 +612,7 @@
   </row>
   <row>
     <panel>
-      <title>$target_prefecture_ja$  感染者 状況 ($last_date$ 現在)</title>
+      <title>$target_prefecture_ja$  感染者 状況 ($prefectures_last_date$ 現在)</title>
       <table>
         <search base="prefectures_all_base" id="prefecutre_table">
           <query>
@@ -636,7 +636,7 @@
       </table>
     </panel>
     <panel>
-      <title>感染者数累積 ($last_date$ 現在)</title>
+      <title>感染者数累積 ($prefectures_last_date$ 現在)</title>
       <chart>
         <title>円の大きさは死亡者数</title>
         <search base="prefectures_all_base">
@@ -691,7 +691,7 @@
       </chart>
     </panel>
     <panel>
-      <title>感染者数累積 ($last_date$ 現在)</title>
+      <title>感染者数累積 ($prefectures_last_date$ 現在)</title>
       <chart>
         <title>縦軸は対数軸</title>
         <search base="prefectures_all_base">
@@ -786,7 +786,7 @@
   </row>
   <row>
     <panel>
-      <title>$target_prefecture_ja$ 集計 ($last_date$ 現在)</title>
+      <title>$target_prefecture_ja$ 集計 ($prefectures_last_date$ 現在)</title>
       <chart>
         <search base="prefecture_summary">
           <query>
@@ -832,7 +832,7 @@
       </chart>
     </panel>
     <panel>
-      <title>$target_prefecture_ja$ 集計 ($last_date$ 現在)</title>
+      <title>$target_prefecture_ja$ 集計 ($prefectures_last_date$ 現在)</title>
       <chart>
         <title>縦軸は線形軸</title>
         <search base="daily_cofirmed_base" id="daily_single_prefecture_confirmed">
@@ -888,7 +888,7 @@
       </chart>
     </panel>
     <panel>
-      <title>$target_prefecture_ja$ 集計 ($last_date$ 現在)</title>
+      <title>$target_prefecture_ja$ 集計 ($prefectures_last_date$ 現在)</title>
       <chart>
         <title>縦軸は対数軸</title>
         <search base="daily_single_prefecture_confirmed">
@@ -944,7 +944,7 @@
   </row>
   <row>
     <panel>
-      <title>$target_prefecture_ja$ 曜日別公表数平均 ($last_date$ 現在)</title>
+      <title>$target_prefecture_ja$ 曜日別公表数平均 ($prefectures_last_date$ 現在)</title>
       <chart>
         <search base="prefecutre_table">
           <query>
@@ -994,7 +994,7 @@
       </chart>
     </panel>
     <panel>
-      <title>前日比増加率 ($last_date$ 現在)</title>
+      <title>前日比増加率 ($prefectures_last_date$ 現在)</title>
       <chart>
         <search base="prefecture_summary">
           <query>
@@ -1048,7 +1048,7 @@
       </chart>
     </panel>
     <panel>
-      <title>10万人当たりの7日間合計感染者数 ($last_date$ 現在)</title>
+      <title>10万人当たりの7日間合計感染者数 ($prefectures_last_date$ 現在)</title>
       <single>
         <search base="sevendays_confirmed">
           <query>
