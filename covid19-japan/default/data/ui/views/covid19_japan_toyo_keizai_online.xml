@@ -104,7 +104,7 @@
       | streamstats current=false window=1 values("PCR検査実施人数") as prev_inspection
       | eval daily_inspection='PCR検査実施人数'-prev_inspection
       | eval daily_inspection=if(isnull(daily_inspection),'PCR検査実施人数',daily_inspection)
-      | timechart values(daily_inspection) as "日毎PCR検査実施人数", values("PCR検査実施人数") as "PCR検査実施人数"
+      | timechart span=1d values(daily_inspection) as "日毎PCR検査実施人数", values("PCR検査実施人数") as "PCR検査実施人数"
       | streamstats current=true window=7 avg("日毎PCR検査実施人数") as avg, avg("PCR検査実施人数") as cum_avg
       | eval "移動平均(7日間)"=round(avg,2)
       | eval "移動平均(累積・7日間)"=round(cum_avg,2)
@@ -176,7 +176,7 @@
   <search base="prefectures_summary_base" id="prefectures_confirmed_base">
     <query>
 <!-- prefectures_summary_base -->
-      | timechart limit=0 values("感染者") as "感染者" by "都道府県"
+      | timechart span=1d limit=0 values("感染者") as "感染者" by "都道府県"
       | fields - _span, _spandays
       | appendpipe 
           [
@@ -190,7 +190,7 @@
   <search base="prefectures_summary_base" id="prefectures_hospitalized_base">
     <query>
 <!-- prefectures_summary_base -->
-      | timechart limit=0 values("退院者") as "退院者" by "都道府県"
+      | timechart span=1d limit=0 values("退院者") as "退院者" by "都道府県"
       | fields - _span, _spandays
       | appendpipe 
           [
@@ -204,7 +204,7 @@
   <search base="prefectures_summary_base" id="prefectures_deceased_base">
     <query>
 <!-- prefectures_summary_base -->
-      | timechart limit=0 values("死亡者") as "死亡者" by "都道府県"
+      | timechart span=1d limit=0 values("死亡者") as "死亡者" by "都道府県"
       | fields - _span, _spandays
       | appendpipe 
           [
@@ -218,7 +218,7 @@
   <search base="prefectures_summary_base" id="prefectures_inspected_base">
     <query>
 <!-- prefectures_summary_base -->
-      | timechart limit=0 values("PCR検査人数") as "PCR検査人数" by "都道府県"
+      | timechart span=1d limit=0 values("PCR検査人数") as "PCR検査人数" by "都道府県"
       | fields - _span, _spandays
       | appendpipe 
           [
@@ -1195,7 +1195,7 @@
         <search base="prefectures_summary_base" id="prefecture_status">
           <query>
 <!-- prefectures_summary_base -->
-            | timechart limit=0 values("$target_status$") as "$target_status$" by "都道府県"
+            | timechart span=1d limit=0 values("$target_status$") as "$target_status$" by "都道府県"
             | fields - _span, _spandays
             | tail 1
             | fields - _time
@@ -1250,7 +1250,7 @@
 <!-- prefectures_summary_base -->
             | search "都道府県"="$target_prefecture$"
             | fields - "都道府県"
-            | timechart values(*) as *
+            | timechart span=1d values(*) as *
             | fields _time, "感染者"
           </query>
         </search>
@@ -1327,7 +1327,7 @@
 <!-- prefectures_summary_base -->
             | search "都道府県"="$target_prefecture$"
             | fields - "都道府県"
-            | timechart values(*) as *
+            | timechart span=1d values(*) as *
             | fields _time, "死亡者"
           </query>
         </search>
@@ -1406,7 +1406,7 @@
 <!-- prefectures_summary_base -->
             | search "都道府県"="$target_prefecture$"
             | fields - "都道府県"
-            | timechart values(*) as *
+            | timechart span=1d values(*) as *
             | fields _time, "退院者"
           </query>
         </search>
@@ -1483,7 +1483,7 @@
 <!-- prefectures_summary_base -->
             | search "都道府県"="$target_prefecture$"
             | fields - "都道府県"
-            | timechart values(*) as *
+            | timechart span=1d values(*) as *
             | fields _time, "PCR検査人数"
           </query>
         </search>
