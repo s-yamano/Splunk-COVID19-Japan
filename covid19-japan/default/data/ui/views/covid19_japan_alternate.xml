@@ -193,7 +193,7 @@
           <query>
 <!-- get_all_patient -->
             | where status="Deceased"
-            | timechart count
+            | timechart span=1d count
             | streamstats sum(count) as count
           </query>
         </search>
