@@ -3,6 +3,7 @@
   <description>Using Data of "Coronavirus Disease (COVID-19) Japan Tracker" (https://covid19japan.com/) and "NipponMap" for Japanese Map (https://cran.r-project.org/web/packages/NipponMap/index.html)</description>
   <init>
     <set token="last_date">-</set>
+    <set token="prefectures_last_date">-</set>
     <unset token="first_date"></unset>
     <unset token="debug">true</unset>
     <!--
@@ -167,6 +168,27 @@
         <option name="count">3</option>
       </table>
     </panel>
+    <panel depends="$debug$">
+      <title>県別更新日時 (デバッグ用)</title>
+      <single>
+        <search base="prefectures_all_base" id="get_prefectures_last_date">
+          <query>
+<!-- prefectures_all_base -->
+            | eval upd=strptime(updated, "%FT%T%z")
+            | stats max(upd) as mt
+            | eval max_date=strftime(mt, "%Y/%m/%d %H:%M")
+            | fields max_date
+          </query>
+          <progress>
+            <set token="prefectures_last_date">-</set>
+          </progress>
+          <done>
+            <set token="prefectures_last_date">$result.max_date$</set>
+          </done>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
   </row>
   <row>
     <panel depends="$debug$">
@@ -176,7 +198,8 @@
           <query>
 <!-- prefectures_all_base -->
             | eval local_earliest=if("$time_earliest$"=="0",0,relative_time(now(),"$time_earliest$"))
-            | where _time&gt;=local_earliest AND _time&lt;relative_time(now(),"+1d@d")
+            | eval local_latest=relative_time(strptime("$prefectures_last_date$", "%Y/%m/%d %H:%M"),"+1d@d")
+            | where _time&gt;=local_earliest AND _time&lt;local_latest
             | fields _time, name_ja, daily_confirmed
             | xyseries _time, name_ja, daily_confirmed
             | addcoltotals labelfield=_time label=Total
@@ -190,7 +213,7 @@
     </panel>
   </row>
   <row>
-    <panel depends="last_date">
+    <panel>
       <title>感染者数累積 ($last_date$ 現在)</title>
       <single>
         <search base="summary_all_base">
@@ -210,7 +233,7 @@
         <option name="useColors">1</option>
       </single>
     </panel>
-    <panel depends="last_date">
+    <panel>
       <title>感染者数 ( 累積 - ( 回復 + 死亡 ) ) ($last_date$ 現在)</title>
       <single>
         <search base="summary_all_base">
@@ -232,7 +255,7 @@
         <option name="useColors">1</option>
       </single>
     </panel>
-    <panel depends="last_date">
+    <panel>
       <title>死亡者数 ($last_date$ 現在)</title>
       <single>
         <search base="summary_all_base">
@@ -262,7 +285,7 @@
         <option name="useThousandSeparators">1</option>
       </single>
     </panel>
-    <panel depends="last_date">
+    <panel>
       <title>重傷者数 ($last_date$ 現在)</title>
       <single>
         <search base="summary_all_base">
@@ -292,7 +315,7 @@
         <option name="useThousandSeparators">1</option>
       </single>
     </panel>
-    <panel depends="last_date">
+    <panel>
       <title>回復者数 ($last_date$ 現在)</title>
       <single>
         <search base="summary_all_base">
@@ -568,8 +591,9 @@
         <fieldForValue>name_ja</fieldForValue>
         <search base="prefectures_all_base">
           <query>
-            | eval local_earliest=if("$time_earliest$"=="0",0,relative_time(strptime("$last_date$", "%Y/%m/%d %H:%M"),"$time_earliest$"))
-            | where _time&gt;=local_earliest AND _time&lt;strptime("$last_date$", "%Y/%m/%d %H:%M")
+            | eval local_earliest=if("$time_earliest$"=="0",0,relative_time(strptime("$prefectures_last_date$", "%Y/%m/%d %H:%M"),"$time_earliest$"))
+            | eval local_latest=relative_time(strptime("$prefectures_last_date$", "%Y/%m/%d %H:%M"),"+1d@d")
+            | where _time&gt;=local_earliest AND _time&lt;local_latest
             | stats values(confirmed) as confirmed by name_ja
             | sort 0 - confirmed
             | fields name_ja
@@ -679,7 +703,7 @@
       </chart>
     </panel>
     <panel>
-      <title>10万人当たりの7日間合計感染者数 ($last_date$ 現在)</title>
+      <title>10万人当たりの7日間合計感染者数 ($prefectures_last_date$ 現在)</title>
       <chart>
         <title>単位は「人」</title>
         <search base="prefectures_all_base">
@@ -691,8 +715,9 @@
                 | fields _time, name, name_ja, daily_deceased
               ]
             | fields _time, name, name_ja, daily_confirmed, daily_deceased
-            | eval local_earliest=relative_time(strptime("$last_date$", "%Y/%m/%d %H:%M"),"+1d@d-7d")
-            | where _time&gt;=local_earliest AND _time&lt;relative_time(strptime("$last_date$", "%Y/%m/%d %H:%M"),"+1d@d")
+            | eval local_earliest=relative_time(strptime("$prefectures_last_date$", "%Y/%m/%d %H:%M"),"+1d@d-7d")
+            | eval local_latest=relative_time(strptime("$prefectures_last_date$", "%Y/%m/%d %H:%M"),"+1d@d")
+            | where _time&gt;=local_earliest AND _time&lt;local_latest
             | fields - _time, local_earliest
             | eventstats sum(daily_confirmed) as sum_7days_confirmed, sum(daily_deceased) as sum_7days_deceased by name_ja
             | fields - daily_confirmed, daily_deceased
@@ -748,8 +773,8 @@
     </panel>
   </row>
   <row>
-    <panel depends="last_date">
-      <title>県別感染者数マップ ($last_date$ 現在)</title>
+    <panel>
+      <title>県別感染者数マップ ($prefectures_last_date$ 現在)</title>
       <map>
         <search base="prefectures_all_base">
           <query>
@@ -1098,7 +1123,8 @@
             | eval header="rate"
             | transpose 0 header_field=header column_name="都道府県"
             | sort 0 - rate
-            | eval constant=1</query>
+            | eval constant=1
+          </query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
         <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
