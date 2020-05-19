@@ -158,7 +158,7 @@ COVID19 Japan Dashboard for Splunk
 
 |Version|Release Date|Description|
 |:--|:--|:--|
-|[0.4.5.1](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.4.5.1)	|2020/05/18	|"COVID19 Japan (specific prefecture)" ダッシュボードに「10万人当たりの7日間合計感染者数」を追加。<br />"COVID19 Japan" ダッシュボードの「10万人当たりの7日間合計感染者数」配置を変更。
+|[0.4.5.2](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.4.5.2)	|2020/05/19	|"COVID19 Japan (specific prefecture)" ダッシュボードに「10万人当たりの7日間合計感染者数」を追加。<br />"COVID19 Japan" ダッシュボードの「10万人当たりの7日間合計感染者数」配置を変更。
 |0.4.4	|2020/05/17	|"COVID19 Japan" ダッシュボードに「10万人当たりの7日間合計感染者数」を追加。
 |0.4.3	|2020/05/15	|東洋経済オンライン元データの CSV ヘッダ変更に対応。(県別テーブル)
 |0.4.1	|2020/05/12	|東洋経済オンライン元データの CSV ヘッダ変更に対応。
