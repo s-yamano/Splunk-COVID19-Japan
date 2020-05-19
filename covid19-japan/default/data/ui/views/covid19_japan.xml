@@ -24,6 +24,7 @@
       | fields _time, annotation_label, annotation_category, annotation_color
     </query>
     <refresh>30m</refresh>
+    <refreshType>interval</refreshType>
   </search>
   <search>
     <!-- 英語県名を日本語県名に変換 -->
@@ -77,7 +78,7 @@
             | fields _time, patientId, confirmedPatient, detectedPrefecture, detectedCityTown, dateAnnounced, patientStatus, deceasedDate, gender, ageBracket, residence,  sourceURL
           </query>
           <refresh>30m</refresh>
-          <refreshType>delay</refreshType>
+          <refreshType>interval</refreshType>
         </search>
         <option name="count">3</option>
         <option name="refresh.display">progressbar</option>
@@ -93,7 +94,7 @@
             | fields _time, updated, confirmed, confirmedAvg3d, confirmedAvg7d, confirmedCumulative, confirmedCumulativeAvg3d, confirmedCumulativeAvg7d, criticalCumulative, deceased, deceasedCumulative, recoveredCumulative, testedCumulative
           </query>
           <refresh>30m</refresh>
-          <refreshType>delay</refreshType>
+          <refreshType>interval</refreshType>
         </search>
         <option name="count">3</option>
         <option name="refresh.display">progressbar</option>
@@ -111,9 +112,6 @@
             | eval max_date=strftime(mt, "%Y/%m/%d %H:%M")
             | fields max_date
           </query>
-          <progress>
-            <set token="last_date">-</set>
-          </progress>
           <done>
             <set token="last_date">$result.max_date$</set>
           </done>
@@ -150,7 +148,7 @@
             | fields _time, updated, name, name_ja, min_time, gc_min_time, dailyConfirmedStartDate, days_confirmed_count, daily_confirmed, gd_min_time, dailyDeceasedStartDate, days_deceased_count, daily_deceased, newlyConfirmed, yesterdayConfirmed, newlyDeceased, yesterdayDeceased, confirmed, deceased, recovered, cruisePassenger, confirmedByCity.*
           </query>
           <refresh>30m</refresh>
-          <refreshType>delay</refreshType>
+          <refreshType>interval</refreshType>
         </search>
         <option name="count">3</option>
         <option name="refresh.display">progressbar</option>
@@ -179,9 +177,6 @@
             | eval max_date=strftime(mt, "%Y/%m/%d %H:%M")
             | fields max_date
           </query>
-          <progress>
-            <set token="prefectures_last_date">-</set>
-          </progress>
           <done>
             <set token="prefectures_last_date">$result.max_date$</set>
           </done>
@@ -196,7 +191,6 @@
       <table>
         <search base="prefectures_all_base" id="daily_confirmed_base">
           <query>
-<!-- prefectures_all_base -->
             | eval local_earliest=if("$time_earliest$"=="0",0,relative_time(now(),"$time_earliest$"))
             | eval local_latest=relative_time(strptime("$prefectures_last_date$", "%Y/%m/%d %H:%M"),"+1d@d")
             | where _time&gt;=local_earliest AND _time&lt;local_latest
@@ -207,7 +201,7 @@
             | sort 0 - Total
             | fields - Total
             | transpose 0 header_field=column column_name=_time
-        </query>
+          </query>
         </search>
       </table>
     </panel>
@@ -609,8 +603,6 @@
         </search>
         <search base="daily_confirmed_base">
           <query>
-<!-- prefectures_all_base -->
-<!-- daily_confirmed_base -->
             | $predict_query_prefix$ $target_prefs$ $predict_query_postfix$
           </query>
         </search>
@@ -645,7 +637,7 @@
         <option name="charting.legend.placement">right</option>
         <option name="charting.lineWidth">2</option>
         <option name="height">400</option>
-        <option name="refresh.display">preview</option>
+        <option name="refresh.display">progressbar</option>
         <option name="trellis.enabled">0</option>
         <option name="trellis.scales.shared">1</option>
         <option name="trellis.size">medium</option>
@@ -659,8 +651,6 @@
         </search>
         <search base="daily_confirmed_base">
           <query>
-<!-- prefectures_all_base -->
-<!-- daily_confirmed_base -->
             | addtotals fieldname="合計"
             | $predict_query_prefix$ $target_prefs$ $predict_query_postfix$
           </query>
@@ -697,6 +687,7 @@
         <option name="charting.legend.placement">right</option>
         <option name="charting.lineWidth">2</option>
         <option name="height">400</option>
+        <option name="refresh.display">progressbar</option>
         <option name="trellis.enabled">0</option>
         <option name="trellis.scales.shared">1</option>
         <option name="trellis.size">medium</option>
@@ -708,7 +699,6 @@
         <title>単位は「人」</title>
         <search base="prefectures_all_base">
           <query>
-<!-- prefectures_all_base -->
             |  join _time, name
               [
                 | inputlookup covid19japan_deceased_by_prefecture_summary.csv
@@ -763,6 +753,7 @@
         <option name="charting.legend.placement">none</option>
         <option name="charting.lineWidth">2</option>
         <option name="height">980</option>
+        <option name="refresh.display">progressbar</option>
         <option name="trellis.enabled">0</option>
         <option name="trellis.scales.shared">1</option>
         <option name="trellis.size">medium</option>
