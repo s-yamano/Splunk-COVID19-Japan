@@ -11,6 +11,7 @@
     <set token="target_prefecture_en">Tokyo</set>
   </init>
   <label>COVID19 Japan Toyo Keizai Online</label>
+  <description>東洋経済オンライン「新型コロナウイルス 国内感染の状況」サイト (https://toyokeizai.net/sp/visual/tko/covid19/) の内容をエミュレートした。</description>
   <search id="annotation_base">
     <query>
       | inputlookup covid19japan_events.csv
@@ -1050,6 +1051,97 @@
       </chart>
     </panel>
     <panel>
+      <title>実効再生産数</title>
+      <single>
+        <title>更新(取得)日時: $summary_time$</title>
+        <search base="effective_reproductive_base">
+          <query>
+<!-- effective_reproductive_base -->
+            | fields _time, "実効再生産数"
+          </query>
+        </search>
+        <option name="height">60</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0.000</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="underLabel">実効再生産数 (トレンドは前日比)</option>
+        <option name="unit">名</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+      <chart>
+        <search base="confirmed_base" id="effective_reproductive_base">
+          <query>
+<!-- confirmed_base -->
+            | streamstats current=true window=7 sum("新規陽性者") as "直近7日間の新規陽性者数"
+            | autoregress "直近7日間の新規陽性者数" as "その前7日間の新規陽性者数" p=7
+            | eval "平均世代時間"=5
+            | eval "報告間隔"=7
+            | eval "実効再生産数"=round(pow(('直近7日間の新規陽性者数'/'その前7日間の新規陽性者数'),('平均世代時間'/'報告間隔')),3)
+            | eval "感染拡大閾値"=1.000
+            | fields _time, "実効再生産数", "感染拡大閾値"
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.overlayFields">感染拡大閾値</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="height">400</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+      <html>
+        <ul>
+          <li>1人から感染する平均感染人数を示す数値</li>
+          <li>簡易計算式: (直近7日間の新規陽性者数 / その前7日間の新規陽性者数)^(平均世代時間 / 報告間隔)</li>
+          <li>平均世代時間: 5, 報告間隔: 7 と仮定</li>
+          <li>北海道大学大学院医学研究院・西浦博教授による "<a href="https://github.com/contactmodel/COVID19-Japan-Reff">contactmodel/COVID19-Japan-Reff - GitHub</a>" 参照</li>
+        </ul>
+      </html>
+    </panel>
+    <panel>
       <title>年齢別の感染者数</title>
       <chart>
         <title>更新(取得)日時: $demography_time$</title>
@@ -1098,10 +1190,10 @@
         <option name="trellis.scales.shared">1</option>
         <option name="trellis.size">medium</option>
       </chart>
-    </panel>
-    <panel>
       <html>
-        <!-- dummy panel -->
+        <ul>
+          <li>厚生労働省からの公表が5月7日で止まっているため、このデータも更新が停止されている。</li>
+        </ul>
       </html>
     </panel>
   </row>
