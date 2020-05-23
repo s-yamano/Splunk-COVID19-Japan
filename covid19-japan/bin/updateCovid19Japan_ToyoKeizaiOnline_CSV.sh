@@ -94,7 +94,6 @@ run_script(){
 Target_Name="
 	summary
 	prefectures
-	prefectures-2
 	demography
 "
 
