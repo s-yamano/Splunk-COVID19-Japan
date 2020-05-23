@@ -1489,6 +1489,105 @@
         <option name="trellis.scales.shared">1</option>
         <option name="trellis.size">medium</option>
       </chart>
+      <single>
+        <title>$target_prefecture$ の実効再生産数 (更新(取得)日時: $prefectures_time$)</title>
+        <search base="effective_reproduction_base">
+          <query>
+<!-- prefectures_summary_base -->
+          </query>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="height">60</option>
+        <option name="numberPrecision">0.000</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="underLabel">実効再生産数</option>
+        <option name="unit">人</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+      <chart>
+        <search base="prefectures_summary_base" id="effective_reproduction_base">
+          <query>
+<!-- prefectures_summary_base -->
+            |  timechart span=1d limit=0 values("感染者") as "感染者" by "都道府県"
+            | fields - _span, _spandays
+
+            | rename * as cum_*
+            | rename cum__time as _time
+            | streamstats current=f window=1 last(cum_*) as prev_*
+            | foreach cum_* [ eval eachday_&lt;&lt;MATCHSTR&gt;&gt; = &lt;&lt;FIELD&gt;&gt; - prev_&lt;&lt;MATCHSTR&gt;&gt; ]
+            | fields - cum_*, prev_*
+            | streamstats current=t window=7 sum(eachday_*) as sum7day_*
+            | fields - eachday_*
+            | streamstats current=f window=7 list(sum7day_*) as old_sum7day_*
+            | eval "ave_gen_period"=5
+            | eval "report_interval"=7
+            | foreach old_sum7day_* [ eval &lt;&lt;FIELD&gt;&gt; = if(isnull('&lt;&lt;FIELD&gt;&gt;'),0, mvindex('&lt;&lt;FIELD&gt;&gt;',0))  ]
+            | foreach sum7day_* [ eval &lt;&lt;MATCHSTR&gt;&gt; = round(pow((&lt;&lt;FIELD&gt;&gt; / old_sum7day_&lt;&lt;MATCHSTR&gt;&gt;), (ave_gen_period / report_interval)), 3) ]
+            | fields - ave_gen_period, report_interval, sum7day_*, old_sum7day_*
+            | foreach * [ eval &lt;&lt;FIELD&gt;&gt; = if(isnum('&lt;&lt;FIELD&gt;&gt;'),'&lt;&lt;FIELD&gt;&gt;',0.000) ]
+            | appendpipe
+              [
+                | stats last(*) as *
+                | eval _time="Current"
+              ]
+            | transpose 0 header_field=_time column_name="prefecture"
+            | sort - Current |  fields - Current
+            | transpose 0 header_field="prefecture" column_name=_time
+            | eval "感染拡大閾値"=1.000
+            | fields _time, "$target_prefecture$", "感染拡大閾値"
+          </query>
+        </search>
+        <search type="annotation" base="annotation_base">
+          <query>
+<!-- annotation_base -->
+          </query>
+        </search>
+        <option name="height">300</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-90</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.chart.overlayFields">感染拡大閾値</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.001</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
     </panel>
     <panel>
       <single>
