@@ -158,7 +158,8 @@ COVID19 Japan Dashboard for Splunk
 
 |Version|Release Date|Description|
 |:--|:--|:--|
-|[v0.4.8](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.4.8)	|2020/05/26	|メモリ消費量を減らすため、mvexpand を置換 (一部残っている)
+|[v0.4.9](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.4.9)	|2020/05/26	|"COVID19 Japan Toyo Keizai Online" ダッシュボードの県別グラフを単一県表示に変更
+|v0.4.8	|2020/05/26	|メモリ消費量を減らすため、mvexpand を置換 (一部残っている)
 |v0.4.7	|2020/05/23	|東洋経済オンラインページに合わせて単一県の「実効再生産数」グラフを追加
 |v0.4.6	|2020/05/21	|東洋経済オンラインページに合わせて「実効再生産数」グラフを追加
 |v0.4.5.2|2020/05/19	|"COVID19 Japan (specific prefecture)" ダッシュボードに「10万人当たりの7日間合計感染者数」を追加。<br />"COVID19 Japan" ダッシュボードの「10万人当たりの7日間合計感染者数」配置を変更。
