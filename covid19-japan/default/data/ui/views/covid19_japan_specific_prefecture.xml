@@ -871,7 +871,7 @@
       </chart>
     </panel>
     <panel>
-      <title>$target_prefecture_ja$ 実効再生算数  ($prefectures_last_date$ 現在)</title>
+      <title>$target_prefecture_ja$ 実効再生産数  ($prefectures_last_date$ 現在)</title>
       <single>
         <search base="effective_reproduce_base">
           <query>
@@ -887,7 +887,7 @@
         <option name="rangeValues">[0,2000,4000,8000,10000]</option>
         <option name="refresh.display">progressbar</option>
         <option name="trendColorInterpretation">inverse</option>
-        <option name="underLabel">実効再生算数</option>
+        <option name="underLabel">実効再生産数</option>
         <option name="unit">人</option>
         <option name="useColors">1</option>
       </single>
