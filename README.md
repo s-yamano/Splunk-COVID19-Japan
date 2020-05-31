@@ -152,13 +152,15 @@ COVID19 Japan Dashboard for Splunk
 
 * [「東京都 新型コロナウイルス感染症対策サイト」から派生した各ページとデータソースの状況 - Qiita](https://qiita.com/msi/items/fad800061808cc92060a)
 * [Splunk による COVID19 日本の状況ダッシュボード - Qiita](https://qiita.com/msi/items/c4151dc2f6e6537e154a)
-
+* 「実行再生産数」は簡易計算式 "(直近7日間の新規陽性者数 / その前7日間の新規陽性者数)^(平均世代時間 / 報告間隔)" を使用しています。  
+	平均世代時間: 5, 報告間隔: 7 と仮定
 
 ## 変更履歴
 
 |Version|Release Date|Description|
 |:--|:--|:--|
-|[v0.4.9](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.4.9)	|2020/05/26	|"COVID19 Japan Toyo Keizai Online" ダッシュボードの県別グラフを単一県表示に変更
+|[v0.4.10](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.4.10)	|2020/05/31	|"COVID19 Japan" ダッシュボードに実効再生産数グラフを追加<br />"COVID19 Japan (specific prefecture)" ダッシュボードに実効再生産数グラフを追加
+|v0.4.9	|2020/05/26	|"COVID19 Japan Toyo Keizai Online" ダッシュボードの県別グラフを単一県表示に変更
 |v0.4.8	|2020/05/26	|メモリ消費量を減らすため、mvexpand を置換 (一部残っている)
 |v0.4.7	|2020/05/23	|東洋経済オンラインページに合わせて単一県の「実効再生産数」グラフを追加
 |v0.4.6	|2020/05/21	|東洋経済オンラインページに合わせて「実効再生産数」グラフを追加
