@@ -898,8 +898,8 @@
             | fields _time, newlyConfirmed
             | streamstats current=true window=7 sum(*) as 7days_sum_*
             | streamstats current=false window=7 first(7days_sum_*) as prev_7days_sum_*
-            | eval term=7
-            | eval rep=5
+            | eval term=5
+            | eval rep=7
             | foreach 7days_sum_* [ eval "&lt;&lt;MATCHSTR&gt;&gt;"=round(pow(('7days_sum_&lt;&lt;MATCHSTR&gt;&gt;' / 'prev_7days_sum_&lt;&lt;MATCHSTR&gt;&gt;'),(term/rep)), 3) ]
             | fields - *7days_sum_*, rep, term
             | foreach * [ fillnull value=0.000 "&lt;&lt;FIELD&gt;&gt;" ]
