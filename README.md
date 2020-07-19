@@ -159,7 +159,8 @@ COVID19 Japan Dashboard for Splunk
 
 |Version|Release Date|Description|
 |:--|:--|:--|
-|[v0.4.10.2](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.4.10.2)	|2020/06/05	|Splunk の spath 動作不具合に対応<br />実行再生産数グラフの設定ミスを修正
+|[v0.4.11](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.4.11)	|2020/07/20	|"COVID19 Japan (specific prefecture)" ダッシュボードにおける各県特有の annotation 表示を追加
+|v0.4.10.2	|2020/06/05	|Splunk の spath 動作不具合に対応<br />実行再生産数グラフの設定ミスを修正
 |v0.4.10	|2020/05/31	|"COVID19 Japan" ダッシュボードに実効再生産数グラフを追加<br />"COVID19 Japan (specific prefecture)" ダッシュボードに実効再生産数グラフを追加
 |v0.4.9	|2020/05/26	|"COVID19 Japan Toyo Keizai Online" ダッシュボードの県別グラフを単一県表示に変更
 |v0.4.8	|2020/05/26	|メモリ消費量を減らすため、mvexpand を置換 (一部残っている)

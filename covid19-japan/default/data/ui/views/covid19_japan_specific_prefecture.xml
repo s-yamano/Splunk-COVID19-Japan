@@ -13,7 +13,7 @@
   <search id="annotation_base">
     <query>
       | inputlookup covid19japan_events.csv
-      | where annotation_category=="common" OR annotation_category="japan_tracker"
+      | where annotation_category=="common" OR annotation_category="japan_tracker" OR annotation_category="$target_prefecture$"
       | fields _time, annotation_label, annotation_category, annotation_color
     </query>
     <refresh>30m</refresh>
@@ -788,9 +788,27 @@
     <panel>
       <title>$target_prefecture_ja$ 10万人当たりの7日間合計感染者数 ($prefectures_last_date$ 現在)</title>
       <single>
-        <search base="sevendays_confirmed">
+        <search base="prefectures_all_base" id="sevendays_confirmed">
           <query>
-<!-- sevendays_confirmed -->
+<!-- prefectures_all_base -->
+            | search name_ja="$target_prefecture_ja$"
+            | fields _time, name, name_ja, daily_confirmed, daily_deceased
+            | streamstats current=t window=7 sum(daily_confirmed) as sum_7days_confirmed, sum(daily_deceased) as sum_7days_deceased by name_ja
+            | fields - daily_confirmed, daily_deceased
+            | join name_ja
+              [
+                | inputlookup populationJapan.csv
+                | where '人口'=="総人口"
+                | rename "全国・都道府県" as name_ja
+                | fields name_ja, "総数"
+              ]
+            | eval "$target_prefecture_ja$"=round(sum_7days_confirmed/('総数'/100),3)
+            | fields _time, "$target_prefecture_ja$"
+            | eval threshold=0.500
+            | sort 0 + _time
+            | eval local_earliest=if("$time_earliest$"=="0",0,relative_time(now(),"$time_earliest$"))
+            | where _time&gt;=local_earliest AND _time&lt;relative_time(now(),"+1d@d")
+            | fields - local_earliest
           </query>
         </search>
         <option name="colorBy">trend</option>
@@ -807,27 +825,10 @@
         <option name="useColors">1</option>
       </single>
       <chart>
-        <search base="prefectures_all_base" id="sevendays_confirmed">
+        <search base="sevendays_confirmed">
           <query>
-<!-- prefectures_all_base -->
-            | search name_ja="$target_prefecture_ja$"
-            | fields _time, name, name_ja, daily_confirmed, daily_deceased
-            | streamstats current=t window=7 sum(daily_confirmed) as sum_7days_confirmed, sum(daily_deceased) as sum_7days_deceased by name_ja
-            | fields - daily_confirmed, daily_deceased
-            | join name_ja
-              [
-                | inputlookup populationJapan.csv
-                | where '人口'=="総人口"
-                | rename "全国・都道府県" as name_ja
-                | fields name_ja, "総数"
-              ]
-            | eval "10万人当たりの7日間合計感染者数"=round(sum_7days_confirmed/('総数'/100),3)
-            | fields _time, "10万人当たりの7日間合計感染者数"
-            | eval threshold=0.500
-            | sort 0 + _time
-            | eval local_earliest=if("$time_earliest$"=="0",0,relative_time(now(),"$time_earliest$"))
-            | where _time&gt;=local_earliest AND _time&lt;relative_time(now(),"+1d@d")
-            | fields - local_earliest
+<!-- sevendays_confirmed -->
+            | $predict_query_prefix$$target_prefecture_ja$$predict_query_postfix$
           </query>
         </search>
         <search type="annotation" base="annotation_base">
@@ -873,25 +874,6 @@
     <panel>
       <title>$target_prefecture_ja$ 実効再生産数  ($prefectures_last_date$ 現在)</title>
       <single>
-        <search base="effective_reproduce_base">
-          <query>
-<!-- effective_reproduce_base -->
-          </query>
-        </search>
-        <option name="colorBy">trend</option>
-        <option name="colorMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="height">60</option>
-        <option name="numberPrecision">0.000</option>
-        <option name="rangeColors">["0xFFFFFF","0xff88ff","0xffcccc","0xff8888","0xff4444","0xff0000"]</option>
-        <option name="rangeValues">[0,2000,4000,8000,10000]</option>
-        <option name="refresh.display">progressbar</option>
-        <option name="trendColorInterpretation">inverse</option>
-        <option name="underLabel">実効再生産数</option>
-        <option name="unit">人</option>
-        <option name="useColors">1</option>
-      </single>
-      <chart>
         <search base="prefectures_all_base" id="effective_reproduce_base">
           <query>
 <!-- prefectures_all_base -->
@@ -908,6 +890,26 @@
             | eval local_earliest=if("$time_earliest$"=="0",0,relative_time(now(),"$time_earliest$"))
             | where _time&gt;=local_earliest AND _time&lt;relative_time(now(),"+1d@d")
             | fields - local_earliest
+          </query>
+        </search>
+        <option name="colorBy">trend</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="height">60</option>
+        <option name="numberPrecision">0.000</option>
+        <option name="rangeColors">["0xFFFFFF","0xff88ff","0xffcccc","0xff8888","0xff4444","0xff0000"]</option>
+        <option name="rangeValues">[0,2000,4000,8000,10000]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trendColorInterpretation">inverse</option>
+        <option name="underLabel">実効再生産数</option>
+        <option name="unit">人</option>
+        <option name="useColors">1</option>
+      </single>
+      <chart>
+        <search base="effective_reproduce_base">
+          <query>
+<!-- effective_reproduce_base -->
+            | $predict_query_prefix$$target_prefecture_ja$$predict_query_postfix$
           </query>
         </search>
         <search type="annotation" base="annotation_base">
