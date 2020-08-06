@@ -159,7 +159,8 @@ COVID19 Japan Dashboard for Splunk
 
 |Version|Release Date|Description|
 |:--|:--|:--|
-|[v0.4.11](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.4.11)	|2020/07/20	|"COVID19 Japan (specific prefecture)" ダッシュボードにおける各県特有の annotation 表示を追加
+|[v0.4.12](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.4.12)	|2020/08/07	|JSON から CSV 作成時の spath 考慮不足を修正
+|v0.4.11	|2020/07/20	|"COVID19 Japan (specific prefecture)" ダッシュボードにおける各県特有の annotation 表示を追加
 |v0.4.10.2	|2020/06/05	|Splunk の spath 動作不具合に対応<br />実行再生産数グラフの設定ミスを修正
 |v0.4.10	|2020/05/31	|"COVID19 Japan" ダッシュボードに実効再生産数グラフを追加<br />"COVID19 Japan (specific prefecture)" ダッシュボードに実効再生産数グラフを追加
 |v0.4.9	|2020/05/26	|"COVID19 Japan Toyo Keizai Online" ダッシュボードの県別グラフを単一県表示に変更
@@ -176,4 +177,4 @@ COVID19 Japan Dashboard for Splunk
 |0.3.3	|2020/05/05	|データ取得スクリプトで flock がない場合には lockf を使用するように修正
 |0.3.2	|2020/05/05	|昨日公表分の日付表示不具合を修正
 |0.3.1	|2020/05/04	|Saved Search による結果が 0 の場合に lookup テーブルのサイズが 0 になる不具合を修正
-|[0.3.0](https://github.com/s-yamano/Splunk-COVID19-Japan/releases/tag/v0.3.0)	|2020/05/03	|Initial Release
+|0.3.0	|2020/05/03	|Initial Release
