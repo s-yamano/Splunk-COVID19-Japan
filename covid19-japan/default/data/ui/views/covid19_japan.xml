@@ -975,6 +975,7 @@
             | table "都道府県", days, "感染", "死亡"
           </query>
         </search>
+        <option name="charting.data.count">15000</option>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
         <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
         <option name="charting.axisTitleX.text">Day0 +</option>
